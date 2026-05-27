@@ -1,0 +1,10 @@
+echo "📢 [pnpm] Rodando validações pré-push..."
+
+# 1. Roda o linter no projeto inteiro
+pnpm run biome:lint
+
+# 2. Roda os seus testes com o Vitest
+pnpm run test
+
+# 3. Roda os testes End-to-End (NestJS + Vitest E2E)
+pnpm run test:e2e
