@@ -1,0 +1,22 @@
+# Dependências
+node_modules
+
+# Git
+.git
+.gitignore
+
+# Variáveis de ambiente locais
+.env
+.env.*
+
+# Build
+dist
+
+# IDE
+.vscode
+
+# Testes e cobertura
+coverage
+
+# Docker
+docker-compose.yml
