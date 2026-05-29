@@ -16,11 +16,15 @@ describe("AppController (e2e)", () => {
 		await app.init();
 	});
 
-	it("/ (GET)", () => {
+	it("/users (POST)", () => {
 		return request(app.getHttpServer())
-			.get("/")
-			.expect(200)
-			.expect("Hello World!");
+			.post("/users")
+			.send({
+				name: "John Doe",
+				email: "example@example.com",
+				password: "password",
+			})
+			.expect(201);
 	});
 
 	afterAll(async () => {
