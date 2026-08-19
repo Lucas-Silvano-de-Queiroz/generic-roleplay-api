@@ -1,12 +1,14 @@
 import { z } from "zod";
 
 const envSchema = z.object({
-	// Application
 	SERVER_PORT: z.coerce.number().default(3000),
-	// Database
+	NODE_ENV: z.enum(["development", "production"]).default("development"),
 	DATABASE_URL: z.string(),
-	// Security
 	PEPPER: z.string(),
+
+	JWT_PRIVATE_KEY_BASE64: z.string(),
+	JWT_PUBLIC_KEY_BASE64: z.string(),
+	JWT_EXPIRES_IN: z.enum(["15m"]).default("15m"),
 });
 
 const result = envSchema.safeParse(process.env);
