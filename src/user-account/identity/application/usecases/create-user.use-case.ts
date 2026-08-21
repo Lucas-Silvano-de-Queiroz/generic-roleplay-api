@@ -7,7 +7,7 @@ import type { HashServiceContract } from "../contracts/hash-service.contract";
 import { HASH_SERVICE_CONTRACT } from "../contracts/hash-service.contract.token";
 import { UserAlreadyExistsError } from "../errors/user-already-exists.error";
 
-export interface CreateUserInput {
+interface CreateUserInput {
 	readonly name: string;
 	readonly email: string;
 	readonly password: string;

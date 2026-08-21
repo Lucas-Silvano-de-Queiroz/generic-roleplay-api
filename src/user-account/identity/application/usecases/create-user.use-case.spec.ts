@@ -10,6 +10,8 @@ describe("CreateUserUseCase", () => {
 	const userRepository = {
 		findByEmail: vi.fn(),
 		save: vi.fn(),
+		findById: vi.fn(),
+		deleteById: vi.fn(),
 	};
 
 	const hashService = {

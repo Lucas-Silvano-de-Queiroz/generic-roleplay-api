@@ -8,6 +8,31 @@ import { users } from "../schema/users.schema";
 
 @Injectable()
 export class DrizzleUserRepositoryPostgreSQL implements UserRepository {
+	async deleteById(userId: string): Promise<void> {
+		await db.delete(users).where(eq(users.id, userId));
+	}
+
+	async findById(userId: string): Promise<User | null> {
+		const result = await db
+			.select()
+			.from(users)
+			.where(eq(users.id, userId))
+			.limit(1);
+
+		const user = result[0];
+
+		if (!user) {
+			return null;
+		}
+
+		return User.restore({
+			id: user.id,
+			name: user.name,
+			email: Email.create(user.email),
+			passwordHash: user.passwordHash,
+		});
+	}
+
 	async save(user: User): Promise<void> {
 		await db
 			.insert(users)
@@ -19,6 +44,7 @@ export class DrizzleUserRepositoryPostgreSQL implements UserRepository {
 			})
 			.onConflictDoNothing({ target: users.email });
 	}
+
 	async findByEmail(email: Email): Promise<User | null> {
 		const result = await db
 			.select()

@@ -10,6 +10,8 @@ RUN pnpm install
 
 COPY . .
 
+USER node
+
 EXPOSE 3000
 
 CMD ["pnpm", "start:dev"]
