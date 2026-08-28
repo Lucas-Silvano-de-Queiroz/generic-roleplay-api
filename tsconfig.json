@@ -15,10 +15,6 @@
 		"sourceMap": true,
 		"outDir": "./dist",
 		"baseUrl": "./src",
-		"paths": {
-			"@user-system-account/*": ["user-system-account/*"],
-			"@shared/*": ["shared/*"]
-		},
 		"ignoreDeprecations": "6.0",
 		"incremental": true,
 		"skipLibCheck": true,
