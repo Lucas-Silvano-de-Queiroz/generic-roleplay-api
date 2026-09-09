@@ -3,9 +3,7 @@ import { APP_GUARD } from "@nestjs/core";
 import { JwtModule } from "@nestjs/jwt";
 import { env } from "modules/shared/config/env";
 import { HASH_SERVICE_CONTRACT } from "./application/contracts/hash-service.contract.token";
-import { IDENTITY_CREDENTIALS_READER } from "./application/contracts/identity-credentials-reader.token";
 import { TOKEN_SERVICE_CONTRACT } from "./application/contracts/token-service.contract";
-import { IdentityCredentialsReaderService } from "./application/services/identity-credentials-reader.service";
 import { CreateUserUseCase } from "./application/usecases/create-user.use-case";
 import { DeleteUserUseCase } from "./application/usecases/delete-user.use-case";
 import { LoginUseCase } from "./application/usecases/login.use-case";
@@ -45,10 +43,6 @@ import { UserController } from "./presentation/http/controllers/user.controller"
 			useClass: Argon2HashServiceAdapter,
 		},
 		{
-			provide: IDENTITY_CREDENTIALS_READER,
-			useClass: IdentityCredentialsReaderService,
-		},
-		{
 			provide: TOKEN_SERVICE_CONTRACT,
 			useExisting: JwtTokenService,
 		},
@@ -58,7 +52,6 @@ import { UserController } from "./presentation/http/controllers/user.controller"
 		},
 	],
 	exports: [
-		IDENTITY_CREDENTIALS_READER,
 		HASH_SERVICE_CONTRACT,
 		CreateUserUseCase,
 		DeleteUserUseCase,

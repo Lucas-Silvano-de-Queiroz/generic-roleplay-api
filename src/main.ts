@@ -6,7 +6,7 @@ import { env } from "./modules/shared/config/env";
 async function bootstrap() {
 	const app = await NestFactory.create(AppModule);
 
-	if (env.NODE_ENV !== "production") {
+	if (env.isDevelopment) {
 		const config = new DocumentBuilder()
 			.setTitle("Generic Roleplay API")
 			.setVersion("1.0")

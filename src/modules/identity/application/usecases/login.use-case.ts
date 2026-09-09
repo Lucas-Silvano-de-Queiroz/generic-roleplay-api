@@ -1,8 +1,8 @@
 import { Inject, Injectable } from "@nestjs/common";
 import type { HashServiceContract } from "modules/identity/application/contracts/hash-service.contract";
 import { HASH_SERVICE_CONTRACT } from "modules/identity/application/contracts/hash-service.contract.token";
-import type { IdentityCredentialsReader } from "modules/identity/application/contracts/identity-credentials.contract";
-import { IDENTITY_CREDENTIALS_READER } from "modules/identity/application/contracts/identity-credentials-reader.token";
+import type { UserRepository } from "modules/identity/domain/repositories/user.repository";
+import { USER_REPOSITORY } from "modules/identity/domain/repositories/user.repository.token";
 import { Email } from "modules/identity/domain/value-objects/email.vo";
 import { TOKEN_SERVICE_CONTRACT } from "../contracts/token-service.contract";
 import type { TokenServiceContract } from "../contracts/token-service.contract.token";
@@ -20,8 +20,8 @@ export interface LoginOutput {
 @Injectable()
 export class LoginUseCase {
 	constructor(
-		@Inject(IDENTITY_CREDENTIALS_READER)
-		private readonly identityCredentialsReader: IdentityCredentialsReader,
+		@Inject(USER_REPOSITORY)
+		private readonly userRepository: UserRepository,
 
 		@Inject(HASH_SERVICE_CONTRACT)
 		private readonly hashService: HashServiceContract,
@@ -33,16 +33,15 @@ export class LoginUseCase {
 	async execute(input: LoginInput): Promise<LoginOutput> {
 		const email = Email.create(input.email);
 
-		const credentials =
-			await this.identityCredentialsReader.findCredentialsByEmail(email);
+		const user = await this.userRepository.findByEmail(email);
 
-		if (!credentials) {
+		if (!user) {
 			throw new InvalidCredentialsError();
 		}
 
 		const passwordMatches = await this.hashService.comparePassword(
 			input.password,
-			credentials.passwordHash,
+			user.passwordHash,
 		);
 
 		if (!passwordMatches) {
@@ -50,7 +49,7 @@ export class LoginUseCase {
 		}
 
 		const accessToken = this.tokenService.sign({
-			sub: credentials.userId,
+			sub: user.id,
 		});
 
 		return {

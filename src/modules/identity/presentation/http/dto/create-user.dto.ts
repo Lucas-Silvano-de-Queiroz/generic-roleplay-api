@@ -25,3 +25,11 @@ export abstract class CreateUserRequestDto {
 	 */
 	abstract password: string;
 }
+
+export abstract class CreateUserResponseDto {
+	/**
+	 * User name
+	 * @example "John Doe"
+	 */
+	abstract id: string;
+}

@@ -20,4 +20,11 @@ if (!result.success) {
 	process.exit(1);
 }
 
-export const env = result.data;
+const config = result.data;
+
+export const env = {
+	...config,
+
+	isDevelopment: config.NODE_ENV === "development",
+	isProduction: config.NODE_ENV === "production",
+} as const;
