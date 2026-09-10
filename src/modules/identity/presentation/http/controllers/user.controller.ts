@@ -20,6 +20,7 @@ import {
 	CreateUserResponseDto,
 	createUserSchema,
 } from "../dto/create-user.dto";
+import { DeleteUserRequestDto, deleteUserSchema } from "../dto/delete-user.dto";
 
 @Controller("users")
 export class UserController {
@@ -38,7 +39,14 @@ export class UserController {
 
 	@Delete("me")
 	@HttpCode(HTTP_CODE.NO_CONTENT)
-	async delete(@CurrentUser() user: AuthenticatedUser): Promise<void> {
-		await this.deleteUserUseCase.execute({ userId: user.id });
+	@UsePipes(new ZodValidationPipe(deleteUserSchema))
+	async delete(
+		@Body() dto: DeleteUserRequestDto,
+		@CurrentUser() user: AuthenticatedUser,
+	): Promise<void> {
+		await this.deleteUserUseCase.execute({
+			userId: user.id,
+			password: dto.password,
+		});
 	}
 }

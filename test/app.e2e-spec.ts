@@ -17,14 +17,37 @@ describe("AppController (e2e)", () => {
 	});
 
 	it("/users (POST)", () => {
+		const email = `e2e-create-${Date.now()}@example.com`;
+
 		return request(app.getHttpServer())
 			.post("/users")
 			.send({
 				name: "John Doe",
-				email: "example@example.com",
+				email,
 				password: "password",
 			})
 			.expect(201);
+	});
+
+	it("DELETE /users/me with password in body", async () => {
+		const email = `e2e-delete-${Date.now()}@example.com`;
+		const password = "password";
+
+		await request(app.getHttpServer())
+			.post("/users")
+			.send({ name: "John Doe", email, password })
+			.expect(201);
+
+		const { body } = await request(app.getHttpServer())
+			.post("/auth/login")
+			.send({ email, password })
+			.expect(200);
+
+		await request(app.getHttpServer())
+			.delete("/users/me")
+			.set("Authorization", `Bearer ${body.accessToken}`)
+			.send({ password })
+			.expect(204);
 	});
 
 	afterAll(async () => {

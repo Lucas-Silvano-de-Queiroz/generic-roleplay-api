@@ -29,7 +29,7 @@ export abstract class CreateUserRequestDto {
 export abstract class CreateUserResponseDto {
 	/**
 	 * User name
-	 * @example "John Doe"
+	 * @example "id"
 	 */
 	abstract id: string;
 }
