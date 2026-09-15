@@ -1,11 +1,16 @@
 import { resolve } from "node:path";
 import swc from "unplugin-swc";
-import { defineConfig } from "vitest/config";
+import { configDefaults, defineConfig } from "vitest/config";
 
 export default defineConfig({
 	test: {
 		globals: true,
 		root: "./",
+		exclude: [
+			...configDefaults.exclude,
+			"**/*.integration-spec.ts",
+			"**/*.e2e-spec.ts",
+		],
 	},
 	oxc: false,
 	plugins: [
