@@ -1,7 +1,7 @@
 import { User } from "modules/identity/domain/entities/user.entity";
 import { Email } from "modules/identity/domain/value-objects/email.vo";
+import { DrizzleUserRepositoryPostgreSQL } from "modules/identity/infrastructure/database/repositories/drizzle-user.repository-postgresql";
 import { afterAll, describe, expect, it } from "vitest";
-import { DrizzleUserRepositoryPostgreSQL } from "./drizzle-user.repository-postgresql";
 
 describe("DrizzleUserRepositoryPostgreSQL (integration)", () => {
 	const sut = new DrizzleUserRepositoryPostgreSQL();
