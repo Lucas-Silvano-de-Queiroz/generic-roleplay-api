@@ -2,6 +2,7 @@ import {
 	ArgumentsHost,
 	BadRequestException,
 	HttpException,
+	Logger,
 	UnauthorizedException,
 } from "@nestjs/common";
 import type { Response } from "express";
@@ -9,6 +10,7 @@ import { InvalidCredentialsError } from "modules/identity/application/errors/inv
 import { UserAlreadyExistsError } from "modules/identity/application/errors/user-already-exists.error";
 import { UserNotFoundError } from "modules/identity/application/errors/user-not-found.error";
 import { InvalidEmailError } from "modules/identity/domain/errors/invalid-email.error";
+import { ApplicationError } from "modules/shared/application/errors/application.error";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { GlobalExceptionFilter } from "./global-exception.filter";
 
@@ -34,8 +36,11 @@ describe("GlobalExceptionFilter", () => {
 	let sut: GlobalExceptionFilter;
 
 	beforeEach(() => {
-		sut = new GlobalExceptionFilter();
 		vi.restoreAllMocks();
+		// silence error logs produced when handling unknown exceptions
+		vi.spyOn(Logger.prototype, "error").mockImplementation(() => {});
+
+		sut = new GlobalExceptionFilter();
 	});
 
 	it("maps DomainError to status, code and message", () => {
@@ -169,6 +174,100 @@ describe("GlobalExceptionFilter", () => {
 		const body = response.json.mock.calls[0][0];
 		expect(body.message).toBe("Internal server error");
 		expect(body.message).not.toContain("secret");
+	});
+
+	it("maps ApplicationError with unknown code to 500 INTERNAL_SERVER_ERROR", () => {
+		class UnknownDomainError extends ApplicationError {
+			readonly code = "SOME_UNKNOWN_CODE";
+			constructor() {
+				super("something unexpected");
+			}
+		}
+
+		const { host, response } = createHttpHost();
+
+		sut.catch(new UnknownDomainError(), host);
+
+		expect(response.status).toHaveBeenCalledWith(500);
+		expect(response.json).toHaveBeenCalledWith({
+			statusCode: 500,
+			code: "SOME_UNKNOWN_CODE",
+			message: "something unexpected",
+		});
+	});
+
+	it("falls back to INTERNAL_SERVER_ERROR code for unmapped HttpException status", () => {
+		const { host, response } = createHttpHost();
+
+		sut.catch(new HttpException("I'm a teapot", 418), host);
+
+		expect(response.status).toHaveBeenCalledWith(418);
+		expect(response.json).toHaveBeenCalledWith({
+			statusCode: 418,
+			code: "INTERNAL_SERVER_ERROR",
+			message: "I'm a teapot",
+		});
+	});
+
+	it("falls back to the exception message when object payload has no message", () => {
+		const { host, response } = createHttpHost();
+
+		sut.catch(new BadRequestException({}), host);
+
+		expect(response.status).toHaveBeenCalledWith(400);
+		expect(response.json).toHaveBeenCalledWith({
+			statusCode: 400,
+			code: "BAD_REQUEST",
+			message: "Bad Request Exception",
+		});
+	});
+
+	it("treats empty validation errors as a regular HttpException", () => {
+		const { host, response } = createHttpHost();
+
+		sut.catch(
+			new BadRequestException({ message: "Validation failed", errors: [] }),
+			host,
+		);
+
+		expect(response.status).toHaveBeenCalledWith(400);
+		expect(response.json).toHaveBeenCalledWith({
+			statusCode: 400,
+			code: "BAD_REQUEST",
+			message: "Validation failed",
+		});
+	});
+
+	it("normalizes malformed validation issues safely", () => {
+		const { host, response } = createHttpHost();
+
+		const exception = new BadRequestException({
+			message: "Validation failed",
+			errors: [{ path: "not-an-array", message: 123 }],
+		});
+
+		sut.catch(exception, host);
+
+		expect(response.status).toHaveBeenCalledWith(400);
+		expect(response.json).toHaveBeenCalledWith({
+			statusCode: 400,
+			code: "VALIDATION_ERROR",
+			message: "Validation failed",
+			details: [{ field: "", message: "123" }],
+		});
+	});
+
+	it("maps non-error thrown values to 500 INTERNAL_SERVER_ERROR", () => {
+		const { host, response } = createHttpHost();
+
+		sut.catch("a thrown string", host);
+
+		expect(response.status).toHaveBeenCalledWith(500);
+		expect(response.json).toHaveBeenCalledWith({
+			statusCode: 500,
+			code: "INTERNAL_SERVER_ERROR",
+			message: "Internal server error",
+		});
 	});
 
 	it("rethrows non-http exceptions without intercepting", () => {

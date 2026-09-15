@@ -1,11 +1,4 @@
-import {
-	Body,
-	Controller,
-	Delete,
-	HttpCode,
-	Post,
-	UsePipes,
-} from "@nestjs/common";
+import { Body, Controller, Delete, HttpCode, Post } from "@nestjs/common";
 import { CreateUserUseCase } from "modules/identity/application/usecases/create-user.use-case";
 import { DeleteUserUseCase } from "modules/identity/application/usecases/delete-user.use-case";
 import { HTTP_CODE } from "modules/shared/presentation/constants/http-codes";
@@ -32,16 +25,16 @@ export class UserController {
 	@Public()
 	@Post()
 	@HttpCode(HTTP_CODE.CREATED)
-	@UsePipes(new ZodValidationPipe(createUserSchema))
-	create(@Body() dto: CreateUserRequestDto): Promise<CreateUserResponseDto> {
+	create(
+		@Body(new ZodValidationPipe(createUserSchema)) dto: CreateUserRequestDto,
+	): Promise<CreateUserResponseDto> {
 		return this.createUserUseCase.execute(dto);
 	}
 
 	@Delete("me")
 	@HttpCode(HTTP_CODE.NO_CONTENT)
-	@UsePipes(new ZodValidationPipe(deleteUserSchema))
 	async delete(
-		@Body() dto: DeleteUserRequestDto,
+		@Body(new ZodValidationPipe(deleteUserSchema)) dto: DeleteUserRequestDto,
 		@CurrentUser() user: AuthenticatedUser,
 	): Promise<void> {
 		await this.deleteUserUseCase.execute({

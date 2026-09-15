@@ -3,32 +3,36 @@ import type { UserRepository } from "modules/identity/domain/repositories/user.r
 import { Email } from "modules/identity/domain/value-objects/email.vo";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { HashServiceContract } from "../contracts/hash-service.contract";
+import type { TokenServiceContract } from "../contracts/token-service.contract.token";
 import { InvalidCredentialsError } from "../errors/invalid-credentials.error";
-import { UserNotFoundError } from "../errors/user-not-found.error";
-import { DeleteUserUseCase } from "./delete-user.use-case";
+import { LoginUseCase } from "./login.use-case";
 
-describe("DeleteUserUseCase", () => {
-	let sut: DeleteUserUseCase;
+describe("LoginUseCase", () => {
+	let sut: LoginUseCase;
 
 	const userRepository = {
-		findById: vi.fn(),
-		deleteById: vi.fn(),
+		findByEmail: vi.fn(),
 	};
 
 	const hashService = {
 		comparePassword: vi.fn(),
 	};
 
+	const tokenService = {
+		sign: vi.fn(),
+	};
+
 	beforeEach(() => {
 		vi.clearAllMocks();
 
-		sut = new DeleteUserUseCase(
+		sut = new LoginUseCase(
 			userRepository as unknown as UserRepository,
 			hashService as unknown as HashServiceContract,
+			tokenService as unknown as TokenServiceContract,
 		);
 	});
 
-	it("should delete a user", async () => {
+	it("should return an access token on valid credentials", async () => {
 		const existingUser = User.restore({
 			id: "user-id",
 			name: "John Doe",
@@ -36,28 +40,38 @@ describe("DeleteUserUseCase", () => {
 			passwordHash: "hashed-password",
 		});
 
-		userRepository.findById.mockResolvedValue(existingUser);
+		userRepository.findByEmail.mockResolvedValue(existingUser);
 		hashService.comparePassword.mockResolvedValue(true);
+		tokenService.sign.mockReturnValue("jwt-token");
 
-		await sut.execute({ userId: "user-id", password: "password" });
+		const result = await sut.execute({
+			email: "john@example.com",
+			password: "password",
+		});
 
-		expect(userRepository.findById).toHaveBeenCalledWith("user-id");
+		expect(result.accessToken).toBe("jwt-token");
+		expect(userRepository.findByEmail).toHaveBeenCalledWith(
+			Email.create("john@example.com"),
+		);
 		expect(hashService.comparePassword).toHaveBeenCalledWith(
 			"password",
 			"hashed-password",
 		);
-		expect(userRepository.deleteById).toHaveBeenCalledWith("user-id");
+		expect(tokenService.sign).toHaveBeenCalledWith({ sub: "user-id" });
 	});
 
-	it("should throw UserNotFoundError when user does not exist", async () => {
-		userRepository.findById.mockResolvedValue(null);
+	it("should throw InvalidCredentialsError when user does not exist", async () => {
+		userRepository.findByEmail.mockResolvedValue(null);
 
 		await expect(
-			sut.execute({ userId: "user-id", password: "password" }),
-		).rejects.toBeInstanceOf(UserNotFoundError);
+			sut.execute({
+				email: "john@example.com",
+				password: "password",
+			}),
+		).rejects.toBeInstanceOf(InvalidCredentialsError);
 
-		expect(userRepository.findById).toHaveBeenCalledWith("user-id");
-		expect(userRepository.deleteById).not.toHaveBeenCalled();
+		expect(hashService.comparePassword).not.toHaveBeenCalled();
+		expect(tokenService.sign).not.toHaveBeenCalled();
 	});
 
 	it("should throw InvalidCredentialsError when password does not match", async () => {
@@ -68,14 +82,16 @@ describe("DeleteUserUseCase", () => {
 			passwordHash: "hashed-password",
 		});
 
-		userRepository.findById.mockResolvedValue(existingUser);
+		userRepository.findByEmail.mockResolvedValue(existingUser);
 		hashService.comparePassword.mockResolvedValue(false);
 
 		await expect(
-			sut.execute({ userId: "user-id", password: "wrong-password" }),
+			sut.execute({
+				email: "john@example.com",
+				password: "wrong-password",
+			}),
 		).rejects.toBeInstanceOf(InvalidCredentialsError);
 
-		expect(userRepository.findById).toHaveBeenCalledWith("user-id");
-		expect(userRepository.deleteById).not.toHaveBeenCalled();
+		expect(tokenService.sign).not.toHaveBeenCalled();
 	});
 });
