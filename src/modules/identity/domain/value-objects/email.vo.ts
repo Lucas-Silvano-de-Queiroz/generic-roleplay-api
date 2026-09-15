@@ -1,7 +1,9 @@
+import { InvalidEmailError } from "../errors/invalid-email.error";
+
 export class Email {
 	private constructor(private readonly _value: string) {
 		if (!this.validate(_value)) {
-			throw new Error("Invalid email format");
+			throw new InvalidEmailError();
 		}
 	}
 	static create(email: string): Email {

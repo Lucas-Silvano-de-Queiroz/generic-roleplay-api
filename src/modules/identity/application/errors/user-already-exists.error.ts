@@ -1,6 +1,9 @@
-export class UserAlreadyExistsError extends Error {
+import { ApplicationError } from "modules/shared/application/errors/application.error";
+
+export class UserAlreadyExistsError extends ApplicationError {
+	readonly code = "USER_ALREADY_EXISTS";
+
 	constructor() {
-		super(`User already exists`);
-		this.name = "UserAlreadyExistsError";
+		super("User already exists");
 	}
 }

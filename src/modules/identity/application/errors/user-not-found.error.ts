@@ -1,6 +1,9 @@
-export class UserNotFoundError extends Error {
+import { ApplicationError } from "modules/shared/application/errors/application.error";
+
+export class UserNotFoundError extends ApplicationError {
+	readonly code = "USER_NOT_FOUND";
+
 	constructor() {
-		super(`User not found`);
-		this.name = "UserNotFoundError";
+		super("User not found");
 	}
 }
