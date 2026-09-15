@@ -16,6 +16,8 @@ export default defineConfig({
 		root: "./",
 		testTimeout: 30_000,
 		hookTimeout: 30_000,
+		globalSetup: ["./test/setup/postgres.global-setup.ts"],
+		setupFiles: ["./test/setup/postgres.setup.ts"],
 	},
 	oxc: false,
 	plugins: [

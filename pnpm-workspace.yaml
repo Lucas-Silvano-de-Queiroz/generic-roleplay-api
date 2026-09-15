@@ -3,5 +3,8 @@ allowBuilds:
   '@scarf/scarf': true
   '@swc/core': true
   argon2: true
+  cpu-features: false
   esbuild: true
+  protobufjs: true
+  ssh2: true
   unrs-resolver: true
