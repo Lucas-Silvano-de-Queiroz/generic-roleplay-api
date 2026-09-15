@@ -11,26 +11,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
       - run: cp .env.example .env
 
-      - run: docker compose up -d --build
+      - run: pnpm install --frozen-lockfile
 
-      - run: sleep 10
-
-      - name: Status dos containers
-        run: docker compose ps
-
-      - name: Logs da API
-        run: docker compose logs api
-
-      - name: Verificar node_modules
-        run: |
-          docker compose exec -T api ls -la /app
-          docker compose exec -T api ls -la /app/node_modules
-
-      - run: docker compose exec -T api pnpm drizzle-kit push
-
-      - run: docker compose exec -T api pnpm test:e2e
-
-      - if: always()
-        run: docker compose down -v
+      - run: pnpm test:e2e
