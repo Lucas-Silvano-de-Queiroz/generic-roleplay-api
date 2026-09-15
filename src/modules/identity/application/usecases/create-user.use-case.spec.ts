@@ -9,7 +9,7 @@ describe("CreateUserUseCase", () => {
 
 	const userRepository = {
 		findByEmail: vi.fn(),
-		save: vi.fn(),
+		create: vi.fn(),
 		findById: vi.fn(),
 		deleteById: vi.fn(),
 	};
@@ -27,6 +27,7 @@ describe("CreateUserUseCase", () => {
 
 	it("should create a user", async () => {
 		userRepository.findByEmail.mockResolvedValue(null);
+		userRepository.create.mockResolvedValue(true);
 		hashService.hashPassword.mockResolvedValue("hashed-password");
 
 		const result = await sut.execute({
@@ -43,9 +44,9 @@ describe("CreateUserUseCase", () => {
 
 		expect(hashService.hashPassword).toHaveBeenCalledWith("123456");
 
-		expect(userRepository.save).toHaveBeenCalledTimes(1);
+		expect(userRepository.create).toHaveBeenCalledTimes(1);
 
-		const savedUser = userRepository.save.mock.calls[0][0];
+		const savedUser = userRepository.create.mock.calls[0][0];
 
 		expect(savedUser).toBeInstanceOf(User);
 		expect(savedUser.name).toBe("John Doe");
@@ -75,11 +76,12 @@ describe("CreateUserUseCase", () => {
 		);
 
 		expect(hashService.hashPassword).not.toHaveBeenCalled();
-		expect(userRepository.save).not.toHaveBeenCalled();
+		expect(userRepository.create).not.toHaveBeenCalled();
 	});
 
 	it("should save the hashed password", async () => {
 		userRepository.findByEmail.mockResolvedValue(null);
+		userRepository.create.mockResolvedValue(true);
 		hashService.hashPassword.mockResolvedValue("hashed-password");
 
 		await sut.execute({
@@ -88,9 +90,25 @@ describe("CreateUserUseCase", () => {
 			password: "123456",
 		});
 
-		const savedUser = userRepository.save.mock.calls[0][0];
+		const savedUser = userRepository.create.mock.calls[0][0];
 
 		expect(savedUser.passwordHash).toBe("hashed-password");
 		expect(savedUser.passwordHash).not.toBe("123456");
+	});
+
+	it("should throw UserAlreadyExistsError when save conflicts (race condition)", async () => {
+		userRepository.findByEmail.mockResolvedValue(null);
+		userRepository.create.mockResolvedValue(false);
+		hashService.hashPassword.mockResolvedValue("hashed-password");
+
+		await expect(
+			sut.execute({
+				name: "John Doe",
+				email: "john@example.com",
+				password: "123456",
+			}),
+		).rejects.toBeInstanceOf(UserAlreadyExistsError);
+
+		expect(userRepository.create).toHaveBeenCalledTimes(1);
 	});
 });

@@ -33,8 +33,8 @@ export class DrizzleUserRepositoryPostgreSQL implements UserRepository {
 		});
 	}
 
-	async save(user: User): Promise<void> {
-		await db
+	async create(user: User): Promise<boolean> {
+		const inserted = await db
 			.insert(users)
 			.values({
 				id: user.id,
@@ -42,7 +42,10 @@ export class DrizzleUserRepositoryPostgreSQL implements UserRepository {
 				email: user.email.value,
 				passwordHash: user.passwordHash,
 			})
-			.onConflictDoNothing({ target: users.email });
+			.onConflictDoNothing({ target: users.email })
+			.returning({ id: users.id });
+
+		return inserted.length > 0;
 	}
 
 	async findByEmail(email: Email): Promise<User | null> {

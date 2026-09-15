@@ -44,7 +44,11 @@ export class CreateUserUseCase {
 			passwordHash,
 		});
 
-		await this.userRepository.save(user);
+		const created = await this.userRepository.create(user);
+
+		if (!created) {
+			throw new UserAlreadyExistsError();
+		}
 
 		return {
 			id: user.id,
