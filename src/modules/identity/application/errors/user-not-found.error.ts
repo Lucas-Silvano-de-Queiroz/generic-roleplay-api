@@ -1,8 +1,6 @@
-import { ApplicationError } from "modules/shared/application/errors/application.error";
+import { NotFoundException } from "@nestjs/common";
 
-export class UserNotFoundError extends ApplicationError {
-	readonly code = "USER_NOT_FOUND";
-
+export class UserNotFoundError extends NotFoundException {
 	constructor() {
 		super("User not found");
 	}

@@ -7,9 +7,11 @@ import { TOKEN_SERVICE_CONTRACT } from "./application/contracts/token-service.co
 import { CreateUserUseCase } from "./application/usecases/create-user.use-case";
 import { DeleteUserUseCase } from "./application/usecases/delete-user.use-case";
 import { LoginUseCase } from "./application/usecases/login.use-case";
+import { RefreshAccessTokenUseCase } from "./application/usecases/refresh-access-token.use-case";
 import { USER_REPOSITORY } from "./domain/repositories/user.repository.token";
 import { JwtAuthGuard } from "./infrastructure/auth/jwt-auth.guard";
 import { JwtTokenService } from "./infrastructure/auth/jwt-token.service";
+import { LoginRateLimitGuard } from "./infrastructure/auth/login-rate-limit.guard";
 import { Argon2HashServiceAdapter } from "./infrastructure/crypto/argon2-hash.adapter";
 import { DrizzleUserRepositoryPostgreSQL } from "./infrastructure/database/repositories/drizzle-user.repository-postgresql";
 import { JwtStrategy } from "./infrastructure/passport/jwt.strategy";
@@ -32,8 +34,10 @@ import { UserController } from "./presentation/http/controllers/user.controller"
 		CreateUserUseCase,
 		DeleteUserUseCase,
 		LoginUseCase,
+		RefreshAccessTokenUseCase,
 		JwtTokenService,
 		JwtStrategy,
+		LoginRateLimitGuard,
 		{
 			provide: USER_REPOSITORY,
 			useClass: DrizzleUserRepositoryPostgreSQL,
@@ -56,6 +60,7 @@ import { UserController } from "./presentation/http/controllers/user.controller"
 		CreateUserUseCase,
 		DeleteUserUseCase,
 		LoginUseCase,
+		RefreshAccessTokenUseCase,
 	],
 })
 export class IdentityModule {}

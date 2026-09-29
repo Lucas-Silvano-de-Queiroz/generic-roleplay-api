@@ -1,8 +1,6 @@
-import { ApplicationError } from "modules/shared/application/errors/application.error";
+import { UnauthorizedException } from "@nestjs/common";
 
-export class InvalidCredentialsError extends ApplicationError {
-	readonly code = "INVALID_CREDENTIALS";
-
+export class InvalidCredentialsError extends UnauthorizedException {
 	constructor() {
 		super("Invalid credentials");
 	}

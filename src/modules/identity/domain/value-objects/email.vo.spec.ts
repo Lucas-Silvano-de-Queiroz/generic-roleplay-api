@@ -27,7 +27,9 @@ describe("Email", () => {
 				expect.unreachable();
 			} catch (error) {
 				expect(error).toBeInstanceOf(InvalidEmailError);
-				expect((error as InvalidEmailError).code).toBe("INVALID_EMAIL");
+				expect((error as InvalidEmailError).message).toBe(
+					"Invalid email format",
+				);
 			}
 		},
 	);

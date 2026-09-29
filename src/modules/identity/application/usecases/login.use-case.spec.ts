@@ -20,6 +20,7 @@ describe("LoginUseCase", () => {
 
 	const tokenService = {
 		sign: vi.fn(),
+		signRefreshToken: vi.fn(),
 	};
 
 	beforeEach(() => {
@@ -43,6 +44,7 @@ describe("LoginUseCase", () => {
 		userRepository.findByEmail.mockResolvedValue(existingUser);
 		hashService.comparePassword.mockResolvedValue(true);
 		tokenService.sign.mockReturnValue("jwt-token");
+		tokenService.signRefreshToken.mockReturnValue("refresh-jwt-token");
 
 		const result = await sut.execute({
 			email: "john@example.com",
@@ -50,6 +52,7 @@ describe("LoginUseCase", () => {
 		});
 
 		expect(result.accessToken).toBe("jwt-token");
+		expect(result.refreshToken).toBe("refresh-jwt-token");
 		expect(userRepository.findByEmail).toHaveBeenCalledWith(
 			Email.create("john@example.com"),
 		);
@@ -58,6 +61,9 @@ describe("LoginUseCase", () => {
 			"hashed-password",
 		);
 		expect(tokenService.sign).toHaveBeenCalledWith({ sub: "user-id" });
+		expect(tokenService.signRefreshToken).toHaveBeenCalledWith({
+			sub: "user-id",
+		});
 	});
 
 	it("should throw InvalidCredentialsError when user does not exist", async () => {
@@ -72,6 +78,7 @@ describe("LoginUseCase", () => {
 
 		expect(hashService.comparePassword).not.toHaveBeenCalled();
 		expect(tokenService.sign).not.toHaveBeenCalled();
+		expect(tokenService.signRefreshToken).not.toHaveBeenCalled();
 	});
 
 	it("should throw InvalidCredentialsError when password does not match", async () => {
@@ -93,5 +100,6 @@ describe("LoginUseCase", () => {
 		).rejects.toBeInstanceOf(InvalidCredentialsError);
 
 		expect(tokenService.sign).not.toHaveBeenCalled();
+		expect(tokenService.signRefreshToken).not.toHaveBeenCalled();
 	});
 });

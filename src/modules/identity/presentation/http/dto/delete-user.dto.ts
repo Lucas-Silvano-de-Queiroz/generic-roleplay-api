@@ -1,3 +1,4 @@
+import { ApiProperty } from "@nestjs/swagger";
 import { z } from "zod";
 
 export const deleteUserSchema = z.object({
@@ -7,9 +8,11 @@ export const deleteUserSchema = z.object({
 export type DeleteUserRequest = z.infer<typeof deleteUserSchema>;
 
 export abstract class DeleteUserRequestDto {
-	/**
-	 * User password must be 8 chars
-	 * @example password
-	 */
+	@ApiProperty({
+		description: "Senha atual da conta (mínimo de 8 caracteres).",
+		example: "senha-segura-123",
+		minLength: 8,
+		writeOnly: true,
+	})
 	abstract password: string;
 }

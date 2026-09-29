@@ -7,7 +7,7 @@ export class Email {
 		}
 	}
 	static create(email: string): Email {
-		return new Email(email);
+		return new Email(email.trim().toLowerCase());
 	}
 
 	private validate(email: string): boolean {

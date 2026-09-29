@@ -15,6 +15,8 @@ export interface LoginInput {
 
 export interface LoginOutput {
 	readonly accessToken: string;
+	readonly refreshToken: string;
+	readonly tokenType: "Bearer";
 }
 
 @Injectable()
@@ -51,9 +53,14 @@ export class LoginUseCase {
 		const accessToken = this.tokenService.sign({
 			sub: user.id,
 		});
+		const refreshToken = this.tokenService.signRefreshToken({
+			sub: user.id,
+		});
 
 		return {
 			accessToken,
+			refreshToken,
+			tokenType: "Bearer",
 		};
 	}
 }

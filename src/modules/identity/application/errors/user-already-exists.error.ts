@@ -1,8 +1,6 @@
-import { ApplicationError } from "modules/shared/application/errors/application.error";
+import { ConflictException } from "@nestjs/common";
 
-export class UserAlreadyExistsError extends ApplicationError {
-	readonly code = "USER_ALREADY_EXISTS";
-
+export class UserAlreadyExistsError extends ConflictException {
 	constructor() {
 		super("User already exists");
 	}

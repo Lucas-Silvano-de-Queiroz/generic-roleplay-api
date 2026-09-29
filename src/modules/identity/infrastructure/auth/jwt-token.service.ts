@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
+import { env } from "modules/shared/config/env";
 import type {
 	AccessTokenPayload,
 	TokenServiceContract,
@@ -10,6 +11,30 @@ export class JwtTokenService implements TokenServiceContract {
 	constructor(private readonly jwtService: JwtService) {}
 
 	sign(payload: AccessTokenPayload): string {
-		return this.jwtService.sign(payload);
+		return this.jwtService.sign({ ...payload, tokenUse: "access" });
+	}
+
+	signRefreshToken(payload: AccessTokenPayload): string {
+		return this.jwtService.sign(
+			{ ...payload, tokenUse: "refresh" },
+			{ expiresIn: env.JWT_REFRESH_EXPIRES_IN },
+		);
+	}
+
+	verifyRefreshToken(token: string): AccessTokenPayload {
+		const payload = this.jwtService.verify<{
+			sub?: unknown;
+			tokenUse?: unknown;
+		}>(token);
+
+		if (
+			typeof payload.sub !== "string" ||
+			payload.sub.length === 0 ||
+			payload.tokenUse !== "refresh"
+		) {
+			throw new Error("Invalid refresh token");
+		}
+
+		return { sub: payload.sub };
 	}
 }

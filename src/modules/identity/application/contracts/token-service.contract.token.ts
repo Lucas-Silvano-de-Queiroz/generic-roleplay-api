@@ -4,4 +4,6 @@ export interface AccessTokenPayload {
 
 export interface TokenServiceContract {
 	sign(payload: AccessTokenPayload): string;
+	signRefreshToken(payload: AccessTokenPayload): string;
+	verifyRefreshToken(token: string): AccessTokenPayload;
 }

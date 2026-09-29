@@ -36,7 +36,7 @@ describe("Users (e2e)", () => {
 			expect(body.id).toEqual(expect.any(String));
 		});
 
-		it("should return 409 USER_ALREADY_EXISTS when the email is already in use", async () => {
+		it("should return 409 when the email is already in use", async () => {
 			const email = `e2e-duplicated-${Date.now()}@example.com`;
 
 			await request(app.getHttpServer())
@@ -51,11 +51,11 @@ describe("Users (e2e)", () => {
 
 			expect(body).toMatchObject({
 				statusCode: 409,
-				code: "USER_ALREADY_EXISTS",
+				message: "User already exists",
 			});
 		});
 
-		it("should return 400 VALIDATION_ERROR when the payload is invalid", async () => {
+		it("should return 400 with details when the payload is invalid", async () => {
 			const { body } = await request(app.getHttpServer())
 				.post("/users")
 				.send({ name: "", email: "not-an-email", password: "123" })
@@ -63,14 +63,26 @@ describe("Users (e2e)", () => {
 
 			expect(body).toMatchObject({
 				statusCode: 400,
-				code: "VALIDATION_ERROR",
+				message: "Validation failed",
 			});
-			expect(body.details).toEqual(expect.any(Array));
+			expect(body.details).toEqual(
+				expect.arrayContaining([
+					expect.objectContaining({
+						field: "email",
+						message: "Invalid email address",
+					}),
+					expect.objectContaining({
+						field: "password",
+						message: "Password must be at least 8 characters",
+					}),
+				]),
+			);
+			expect(body.errors).toBeUndefined();
 		});
 	});
 
 	describe("DELETE /users/me", () => {
-		it("should return 401 UNAUTHORIZED when no access token is provided", async () => {
+		it("should return 401 when no access token is provided", async () => {
 			const { body } = await request(app.getHttpServer())
 				.delete("/users/me")
 				.send({ password: "password" })
@@ -78,7 +90,7 @@ describe("Users (e2e)", () => {
 
 			expect(body).toMatchObject({
 				statusCode: 401,
-				code: "UNAUTHORIZED",
+				message: "Unauthorized",
 			});
 		});
 
@@ -109,7 +121,39 @@ describe("Users (e2e)", () => {
 
 			expect(loginAfterDelete).toMatchObject({
 				statusCode: 401,
-				code: "INVALID_CREDENTIALS",
+				message: "Invalid credentials",
+			});
+		});
+
+		it("should return 404 when the token refers to a deleted user", async () => {
+			const email = `e2e-gone-${Date.now()}@example.com`;
+			const password = "password";
+
+			await request(app.getHttpServer())
+				.post("/users")
+				.send({ name: "John Doe", email, password })
+				.expect(201);
+
+			const { body } = await request(app.getHttpServer())
+				.post("/auth/login")
+				.send({ email, password })
+				.expect(200);
+
+			await request(app.getHttpServer())
+				.delete("/users/me")
+				.set("Authorization", `Bearer ${body.accessToken}`)
+				.send({ password })
+				.expect(204);
+
+			const { body: secondDelete } = await request(app.getHttpServer())
+				.delete("/users/me")
+				.set("Authorization", `Bearer ${body.accessToken}`)
+				.send({ password })
+				.expect(404);
+
+			expect(secondDelete).toMatchObject({
+				statusCode: 404,
+				message: "User not found",
 			});
 		});
 	});

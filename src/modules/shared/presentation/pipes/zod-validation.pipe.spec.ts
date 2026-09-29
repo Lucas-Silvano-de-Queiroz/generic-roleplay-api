@@ -36,7 +36,7 @@ describe("ZodValidationPipe", () => {
 		).toThrow(BadRequestException);
 	});
 
-	it("includes validation issues in the exception payload", () => {
+	it("includes clean details in the exception payload", () => {
 		let error: unknown;
 
 		try {
@@ -54,7 +54,33 @@ describe("ZodValidationPipe", () => {
 
 		expect(payload).toMatchObject({
 			message: "Validation failed",
-			errors: expect.any(Array),
+			details: [
+				{ field: "email", message: "Invalid email address" },
+				{ field: "password", message: "Password is required" },
+			],
+		});
+	});
+
+	it("joins nested paths into a dotted field", () => {
+		const nested = new ZodValidationPipe(
+			z.object({
+				address: z.object({ zip: z.string().min(1, "too short") }),
+			}),
+		);
+
+		let error: unknown;
+
+		try {
+			nested.transform({ address: { zip: "" } });
+		} catch (caught) {
+			error = caught;
+		}
+
+		const payload = (error as BadRequestException).getResponse();
+
+		expect(payload).toMatchObject({
+			message: "Validation failed",
+			details: [{ field: "address.zip", message: "too short" }],
 		});
 	});
 });

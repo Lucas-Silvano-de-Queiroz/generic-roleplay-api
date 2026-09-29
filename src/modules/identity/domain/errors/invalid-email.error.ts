@@ -1,8 +1,6 @@
-import { DomainError } from "modules/shared/domain/errors/domain.error";
+import { BadRequestException } from "@nestjs/common";
 
-export class InvalidEmailError extends DomainError {
-	readonly code = "INVALID_EMAIL";
-
+export class InvalidEmailError extends BadRequestException {
 	constructor() {
 		super("Invalid email format");
 	}

@@ -5,12 +5,16 @@ import { env } from "./modules/shared/config/env";
 
 async function bootstrap() {
 	const app = await NestFactory.create(AppModule);
+	app.enableShutdownHooks();
 
 	if (env.isDevelopment) {
 		const config = new DocumentBuilder()
 			.setTitle("Generic Roleplay API")
+			.setDescription(
+				"API de cadastro, autenticação e gerenciamento da própria conta.",
+			)
 			.setVersion("1.0")
-			.addTag("User")
+			.addBearerAuth()
 			.build();
 
 		const documentFactory = () => SwaggerModule.createDocument(app, config);

@@ -5,6 +5,7 @@ import { ExtractJwt, Strategy } from "passport-jwt";
 
 interface JwtPayload {
 	sub: string;
+	tokenUse: "access";
 }
 
 export interface AuthenticatedUser {
@@ -26,7 +27,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 	}
 
 	validate(payload: JwtPayload): AuthenticatedUser {
-		if (!payload.sub) {
+		if (!payload.sub || payload.tokenUse !== "access") {
 			throw new UnauthorizedException();
 		}
 
