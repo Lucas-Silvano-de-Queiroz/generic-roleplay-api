@@ -1,16 +1,16 @@
 import { Injectable } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
-import { env } from "modules/shared/config/env";
 import type {
 	AccessTokenPayload,
 	TokenServiceContract,
 } from "modules/identity/application/contracts/token-service.contract.token";
+import { env } from "modules/shared/config/env";
 
 @Injectable()
 export class JwtTokenService implements TokenServiceContract {
 	constructor(private readonly jwtService: JwtService) {}
 
-	sign(payload: AccessTokenPayload): string {
+	signAccessToken(payload: AccessTokenPayload): string {
 		return this.jwtService.sign({ ...payload, tokenUse: "access" });
 	}
 

@@ -1,8 +1,8 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { TOKEN_SERVICE_CONTRACT } from "../contracts/token-service.contract";
-import type { TokenServiceContract } from "../contracts/token-service.contract.token";
 import type { UserRepository } from "../../domain/repositories/user.repository";
 import { USER_REPOSITORY } from "../../domain/repositories/user.repository.token";
+import { TOKEN_SERVICE_CONTRACT } from "../contracts/token-service.contract";
+import type { TokenServiceContract } from "../contracts/token-service.contract.token";
 import { InvalidCredentialsError } from "../errors/invalid-credentials.error";
 
 export interface RefreshAccessTokenInput {
@@ -39,7 +39,7 @@ export class RefreshAccessTokenUseCase {
 		}
 
 		return {
-			accessToken: this.tokenService.sign({ sub: user.id }),
+			accessToken: this.tokenService.signAccessToken({ sub: user.id }),
 			tokenType: "Bearer",
 		};
 	}

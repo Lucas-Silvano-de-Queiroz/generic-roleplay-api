@@ -1,25 +1,23 @@
 import { Body, Controller, Delete, HttpCode, Post } from "@nestjs/common";
 import {
 	ApiBearerAuth,
-	ApiBadRequestResponse,
-	ApiConflictResponse,
 	ApiCreatedResponse,
-	ApiInternalServerErrorResponse,
 	ApiNoContentResponse,
-	ApiNotFoundResponse,
 	ApiOperation,
 	ApiTags,
-	ApiUnauthorizedResponse,
 } from "@nestjs/swagger";
 import { CreateUserUseCase } from "modules/identity/application/usecases/create-user.use-case";
 import { DeleteUserUseCase } from "modules/identity/application/usecases/delete-user.use-case";
 import { HTTP_CODE } from "modules/shared/presentation/constants/http-codes";
 import {
+	ApiCreateUserErrorResponses,
+	ApiDeleteUserErrorResponses,
+} from "modules/shared/presentation/decorators/api-error-responses.decorator";
+import {
 	type AuthenticatedUser,
 	CurrentUser,
 } from "modules/shared/presentation/decorators/current-user.decorator";
 import { Public } from "modules/shared/presentation/decorators/public.decorator";
-import { ApiErrorResponseDto } from "modules/shared/presentation/dto/api-error-response.dto";
 import { ZodValidationPipe } from "modules/shared/presentation/pipes/zod-validation.pipe";
 import {
 	CreateUserRequestDto,
@@ -44,25 +42,7 @@ export class UserController {
 		type: CreateUserResponseDto,
 		description: "Conta criada com sucesso.",
 	})
-	@ApiBadRequestResponse({
-		type: ApiErrorResponseDto,
-		description: "Dados inválidos.",
-		example: {
-			statusCode: 400,
-			message: "Validation failed",
-			details: [{ field: "email", message: "Invalid email address" }],
-		},
-	})
-	@ApiConflictResponse({
-		type: ApiErrorResponseDto,
-		description: "Já existe uma conta com esse e-mail.",
-		example: { statusCode: 409, message: "User already exists" },
-	})
-	@ApiInternalServerErrorResponse({
-		type: ApiErrorResponseDto,
-		description: "Falha inesperada.",
-		example: { statusCode: 500, message: "Internal Server Error" },
-	})
+	@ApiCreateUserErrorResponses()
 	create(
 		@Body(new ZodValidationPipe(createUserSchema)) dto: CreateUserRequestDto,
 	): Promise<CreateUserResponseDto> {
@@ -74,30 +54,7 @@ export class UserController {
 	@ApiBearerAuth()
 	@ApiOperation({ summary: "Excluir a conta autenticada" })
 	@ApiNoContentResponse({ description: "Conta excluída com sucesso." })
-	@ApiBadRequestResponse({
-		type: ApiErrorResponseDto,
-		description: "Senha ausente ou inválida.",
-		example: {
-			statusCode: 400,
-			message: "Validation failed",
-			details: [{ field: "password", message: "Password must be at least 8 characters" }],
-		},
-	})
-	@ApiUnauthorizedResponse({
-		type: ApiErrorResponseDto,
-		description: "Token ausente, inválido ou senha incorreta.",
-		example: { statusCode: 401, message: "Unauthorized" },
-	})
-	@ApiNotFoundResponse({
-		type: ApiErrorResponseDto,
-		description: "Usuário do token não foi encontrado.",
-		example: { statusCode: 404, message: "User not found" },
-	})
-	@ApiInternalServerErrorResponse({
-		type: ApiErrorResponseDto,
-		description: "Falha inesperada.",
-		example: { statusCode: 500, message: "Internal Server Error" },
-	})
+	@ApiDeleteUserErrorResponses()
 	async delete(
 		@Body(new ZodValidationPipe(deleteUserSchema)) dto: DeleteUserRequestDto,
 		@CurrentUser() user: AuthenticatedUser,

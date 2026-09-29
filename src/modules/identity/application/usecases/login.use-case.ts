@@ -50,7 +50,7 @@ export class LoginUseCase {
 			throw new InvalidCredentialsError();
 		}
 
-		const accessToken = this.tokenService.sign({
+		const accessToken = this.tokenService.signAccessToken({
 			sub: user.id,
 		});
 		const refreshToken = this.tokenService.signRefreshToken({
