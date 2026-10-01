@@ -55,7 +55,7 @@ export const ApiLoginErrorResponses = () =>
 		},
 		{
 			statusCode: 429,
-			description: "Limite de tentativas excedido. Aguarde 15 minutos.",
+			description: "Limite de chamadas excedido. Consulte Retry-After.",
 			headers: {
 				"Retry-After": {
 					description: "Segundos até que uma nova tentativa seja permitida.",
@@ -64,7 +64,7 @@ export const ApiLoginErrorResponses = () =>
 			},
 			example: {
 				statusCode: 429,
-				message: "Too many login attempts. Try again later.",
+				message: "Too many requests. Try again later.",
 			},
 		},
 		{
@@ -88,6 +88,28 @@ export const ApiRefreshErrorResponses = () =>
 			example: { statusCode: 401, message: "Invalid credentials" },
 		},
 		{
+			statusCode: 429,
+			description: "Limite de chamadas excedido.",
+			headers: {
+				"Retry-After": {
+					description: "Segundos até uma nova tentativa.",
+					schema: { type: "integer" },
+				},
+			},
+			example: {
+				statusCode: 429,
+				message: "Too many requests. Try again later.",
+			},
+		},
+		{
+			statusCode: 503,
+			description: "Capacidade de autenticação ou banco indisponível.",
+			example: {
+				statusCode: 503,
+				message: "Authentication service unavailable",
+			},
+		},
+		{
 			statusCode: 500,
 			description: "Falha inesperada.",
 			example: { statusCode: 500, message: "Internal Server Error" },
@@ -105,6 +127,28 @@ export const ApiCreateUserErrorResponses = () =>
 			statusCode: 409,
 			description: "Já existe uma conta com esse e-mail.",
 			example: { statusCode: 409, message: "User already exists" },
+		},
+		{
+			statusCode: 429,
+			description: "Limite de chamadas excedido.",
+			headers: {
+				"Retry-After": {
+					description: "Segundos até uma nova tentativa.",
+					schema: { type: "integer" },
+				},
+			},
+			example: {
+				statusCode: 429,
+				message: "Too many requests. Try again later.",
+			},
+		},
+		{
+			statusCode: 503,
+			description: "Capacidade de autenticação ou banco indisponível.",
+			example: {
+				statusCode: 503,
+				message: "Authentication service unavailable",
+			},
 		},
 		{
 			statusCode: 500,
@@ -132,6 +176,28 @@ export const ApiDeleteUserErrorResponses = () =>
 			statusCode: 404,
 			description: "Usuário do token não foi encontrado.",
 			example: { statusCode: 404, message: "User not found" },
+		},
+		{
+			statusCode: 429,
+			description: "Limite de chamadas excedido.",
+			headers: {
+				"Retry-After": {
+					description: "Segundos até uma nova tentativa.",
+					schema: { type: "integer" },
+				},
+			},
+			example: {
+				statusCode: 429,
+				message: "Too many requests. Try again later.",
+			},
+		},
+		{
+			statusCode: 503,
+			description: "Capacidade de autenticação ou banco indisponível.",
+			example: {
+				statusCode: 503,
+				message: "Authentication service unavailable",
+			},
 		},
 		{
 			statusCode: 500,

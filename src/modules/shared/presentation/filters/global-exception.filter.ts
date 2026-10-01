@@ -28,27 +28,44 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 		}
 
 		const response = host.switchToHttp().getResponse<Response>();
-		const httpException = this.resolve(exception);
+		const request = host.switchToHttp().getRequest?.();
+		const httpException = this.resolve(exception, request?.requestId);
 		const statusCode = httpException.getStatus();
+		if ([401, 403, 429, 503].includes(statusCode)) {
+			this.logger.warn({
+				event: "security_request_rejected",
+				statusCode,
+				requestId: request?.requestId,
+				method: request?.method,
+				route: request?.route?.path,
+			});
+		}
 		const payload = httpException.getResponse();
 		const details = this.details(payload);
 
 		response.status(statusCode).json({
 			statusCode,
-			message: this.message(payload, httpException.message),
+			message:
+				statusCode === 400
+					? "Validation failed"
+					: this.message(payload, httpException.message),
 			...(details ? { details } : {}),
 		});
 	}
 
-	private resolve(exception: unknown): HttpException {
+	private resolve(exception: unknown, requestId?: string): HttpException {
 		if (exception instanceof HttpException) {
 			return exception;
 		}
+		if (
+			exception instanceof Error &&
+			"type" in exception &&
+			exception.type === "entity.too.large"
+		) {
+			return new HttpException("Request body too large", 413);
+		}
 
-		const message =
-			exception instanceof Error ? exception.message : String(exception);
-		const stack = exception instanceof Error ? exception.stack : undefined;
-		this.logger.error(`Unhandled error: ${message}`, stack);
+		this.logger.error({ event: "unexpected_error", requestId });
 
 		return new InternalServerErrorException();
 	}

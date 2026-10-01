@@ -1,12 +1,10 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import { env } from "modules/shared/config/env";
-import { Pool } from "pg";
+import { createDatabasePool } from "./database-pool";
 
-export const pool = new Pool({
-	connectionString: env.DATABASE_URL,
-	max: 10,
-	idleTimeoutMillis: 30_000,
-	connectionTimeoutMillis: 5_000,
-});
+export const pool = createDatabasePool(
+	env.DATABASE_URL,
+	env.DATABASE_QUERY_TIMEOUT_MS,
+);
 
 export const db = drizzle(pool);

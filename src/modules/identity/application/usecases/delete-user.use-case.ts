@@ -1,4 +1,4 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Logger } from "@nestjs/common";
 import type { UserRepository } from "modules/identity/domain/repositories/user.repository";
 import { USER_REPOSITORY } from "modules/identity/domain/repositories/user.repository.token";
 import type { HashServiceContract } from "../contracts/hash-service.contract";
@@ -13,6 +13,7 @@ interface DeleteUserInput {
 
 @Injectable()
 export class DeleteUserUseCase {
+	private readonly logger = new Logger(DeleteUserUseCase.name);
 	constructor(
 		@Inject(USER_REPOSITORY)
 		private readonly usersRepository: UserRepository,
@@ -37,5 +38,6 @@ export class DeleteUserUseCase {
 		}
 
 		await this.usersRepository.deleteById(existingUser.id);
+		this.logger.log({ event: "account_deleted", userId: existingUser.id });
 	}
 }

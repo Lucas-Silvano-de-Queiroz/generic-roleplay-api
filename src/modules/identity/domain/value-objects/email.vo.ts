@@ -11,8 +11,11 @@ export class Email {
 	}
 
 	private validate(email: string): boolean {
-		const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-		return emailRegex.test(email);
+		if (email.length > 255 || /\s/.test(email)) return false;
+		const at = email.indexOf("@");
+		if (at < 1 || at !== email.lastIndexOf("@")) return false;
+		const dot = email.indexOf(".", at + 2);
+		return dot !== -1 && dot < email.length - 1;
 	}
 
 	get value() {

@@ -13,6 +13,7 @@ export default defineConfig({
 	test: {
 		include: ["**/*.e2e-spec.ts", "**/*.integration-spec.ts"],
 		globals: true,
+		fileParallelism: false,
 		root: "./",
 		testTimeout: 30_000,
 		hookTimeout: 30_000,
