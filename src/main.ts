@@ -1,10 +1,13 @@
+import { Logger } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { AppModule } from "./app.module";
 import { env } from "./modules/shared/config/env";
+import { configureHttpApplication } from "./modules/shared/presentation/configure-http-application";
 
 async function bootstrap() {
 	const app = await NestFactory.create(AppModule);
+	configureHttpApplication(app);
 	app.enableShutdownHooks();
 
 	if (env.isDevelopment) {
@@ -23,4 +26,7 @@ async function bootstrap() {
 
 	await app.listen(env.SERVER_PORT);
 }
-bootstrap();
+void bootstrap().catch(() => {
+	new Logger("Bootstrap").error({ event: "startup_failed" });
+	process.exit(1);
+});

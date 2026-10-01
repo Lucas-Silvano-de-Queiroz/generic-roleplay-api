@@ -1,5 +1,12 @@
 # Dependências
 node_modules
+.pnpm-store
+.temp
+.tmp
+.codex
+.agents
+.aws
+logs
 
 # Git
 .git
@@ -8,9 +15,13 @@ node_modules
 # Variáveis de ambiente locais
 .env
 .env.*
+keys
+*.pem
+*.key
 
 # Build
 dist
+*.tsbuildinfo
 
 # IDE
 .vscode

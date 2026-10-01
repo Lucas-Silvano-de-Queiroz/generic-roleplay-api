@@ -5,6 +5,7 @@ import { IS_PUBLIC_KEY } from "modules/shared/presentation/decorators/public.dec
 
 export interface AuthenticatedUser {
 	id: string;
+	sessionId: string;
 }
 
 @Injectable()

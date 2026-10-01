@@ -33,7 +33,6 @@
 		"@nestjs/swagger": "^11.4.6",
 		"argon2": "^0.45.1",
 		"drizzle-orm": "^0.45.2",
-		"nodemailer": "^9.0.5",
 		"passport": "^0.7.0",
 		"passport-jwt": "^4.0.1",
 		"pg": "^8.23.0",
@@ -50,13 +49,13 @@
 		"@nestjs/schematics": "^11.1.0",
 		"@nestjs/testing": "^11.1.29",
 		"@swc/core": "^1.15.47",
-		"@testcontainers/postgresql": "^10.28.0",
+		"@testcontainers/postgresql": "^12.2.0",
 		"@types/express": "^5.0.6",
 		"@types/node": "^26.2.0",
 		"@types/passport-jwt": "^4.0.1",
 		"@types/pg": "^8.21.0",
 		"@types/supertest": "^7.2.1",
-		"@vitest/coverage-v8": "^4.1.10",
+		"@vitest/coverage-v8": "^4.1.11",
 		"commitizen": "^4.3.2",
 		"cz-conventional-changelog": "^3.3.0",
 		"drizzle-kit": "^0.31.10",
@@ -70,7 +69,7 @@
 		"tsconfig-paths": "^4.2.0",
 		"typescript": "^6.0.3",
 		"unplugin-swc": "^1.5.10",
-		"vitest": "^4.1.10"
+		"vitest": "^4.1.11"
 	},
 	"lint-staged": {
 		"*.{js,ts,json}": [

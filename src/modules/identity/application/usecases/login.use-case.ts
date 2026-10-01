@@ -37,30 +37,15 @@ export class LoginUseCase {
 
 		const user = await this.userRepository.findByEmail(email);
 
-		if (!user) {
-			throw new InvalidCredentialsError();
-		}
-
 		const passwordMatches = await this.hashService.comparePassword(
 			input.password,
-			user.passwordHash,
+			user?.passwordHash ?? null,
 		);
 
-		if (!passwordMatches) {
+		if (!user || !passwordMatches) {
 			throw new InvalidCredentialsError();
 		}
 
-		const accessToken = this.tokenService.signAccessToken({
-			sub: user.id,
-		});
-		const refreshToken = this.tokenService.signRefreshToken({
-			sub: user.id,
-		});
-
-		return {
-			accessToken,
-			refreshToken,
-			tokenType: "Bearer",
-		};
+		return this.tokenService.createSession(user.id);
 	}
 }

@@ -3,6 +3,7 @@ import { Test, type TestingModule } from "@nestjs/testing";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { AppModule } from "../../src/app.module";
+import { configureHttpApplication } from "../../src/modules/shared/presentation/configure-http-application";
 
 describe("Users (e2e)", () => {
 	let app: INestApplication;
@@ -13,6 +14,7 @@ describe("Users (e2e)", () => {
 		}).compile();
 
 		app = moduleFixture.createNestApplication();
+		configureHttpApplication(app);
 		await app.init();
 	});
 
@@ -125,7 +127,7 @@ describe("Users (e2e)", () => {
 			});
 		});
 
-		it("should return 404 when the token refers to a deleted user", async () => {
+		it("should return 401 when the token refers to a deleted user", async () => {
 			const email = `e2e-gone-${Date.now()}@example.com`;
 			const password = "password";
 
@@ -149,11 +151,11 @@ describe("Users (e2e)", () => {
 				.delete("/users/me")
 				.set("Authorization", `Bearer ${body.accessToken}`)
 				.send({ password })
-				.expect(404);
+				.expect(401);
 
 			expect(secondDelete).toMatchObject({
-				statusCode: 404,
-				message: "User not found",
+				statusCode: 401,
+				message: "Unauthorized",
 			});
 		});
 	});

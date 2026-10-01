@@ -1,4 +1,4 @@
 export interface HashServiceContract {
 	hashPassword(password: string): Promise<string>;
-	comparePassword(password: string, hash: string): Promise<boolean>;
+	comparePassword(password: string, hash: string | null): Promise<boolean>;
 }

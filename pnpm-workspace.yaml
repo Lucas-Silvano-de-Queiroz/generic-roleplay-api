@@ -8,3 +8,15 @@ allowBuilds:
   protobufjs: true
   ssh2: true
   unrs-resolver: true
+
+# Upstream pins still resolve affected versions; compatible security updates.
+overrides:
+  '@nestjs/platform-express>multer': 2.4.0
+  '@nestjs/swagger>js-yaml': 5.4.1
+  # Target affected resolutions only; esbuild's loader API is verified by CLI smoke test.
+  '@esbuild-kit/core-utils>esbuild': 0.25.0
+  'vite@8.0.14': 8.0.16
+  'postcss@8.5.15': 8.5.23
+  'nanoid@3.3.12': 3.3.18
+  'browserslist@4.28.2': 4.28.7
+  'baseline-browser-mapping@2.10.32': 2.11.0

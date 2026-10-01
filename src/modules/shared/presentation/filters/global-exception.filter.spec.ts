@@ -89,6 +89,26 @@ describe("GlobalExceptionFilter", () => {
 		);
 		expect(response.status).not.toHaveBeenCalled();
 	});
+	it("logs rejected credentials without recording their message", () => {
+		const spy = vi
+			.spyOn(Logger.prototype, "warn")
+			.mockImplementation(() => undefined);
+		filter.catch(
+			new UnauthorizedException("sensitive-token"),
+			createHost(response),
+		);
+		expect(spy).toHaveBeenCalled();
+		expect(JSON.stringify(spy.mock.calls)).not.toContain("sensitive-token");
+		spy.mockRestore();
+	});
+	it("does not record sensitive unexpected error messages", () => {
+		const spy = vi
+			.spyOn(Logger.prototype, "error")
+			.mockImplementation(() => undefined);
+		filter.catch(new Error("password=secret-value"), createHost(response));
+		expect(JSON.stringify(spy.mock.calls)).not.toContain("secret-value");
+		spy.mockRestore();
+	});
 
 	it("should keep unauthorized responses without extra keys", () => {
 		filter.catch(new UnauthorizedException(), createHost(response));
@@ -96,6 +116,18 @@ describe("GlobalExceptionFilter", () => {
 		expect(response.json).toHaveBeenCalledWith({
 			statusCode: 401,
 			message: "Unauthorized",
+		});
+	});
+	it("maps an oversized parser body to a controlled 413", () => {
+		const error = Object.assign(
+			new Error("payload contains sensitive information"),
+			{ type: "entity.too.large", status: 413 },
+		);
+		filter.catch(error, createHost(response));
+		expect(response.status).toHaveBeenCalledWith(413);
+		expect(response.json).toHaveBeenCalledWith({
+			statusCode: 413,
+			message: "Request body too large",
 		});
 	});
 });

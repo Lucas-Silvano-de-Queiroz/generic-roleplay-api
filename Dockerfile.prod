@@ -1,4 +1,4 @@
-FROM node:24-alpine AS base
+FROM node:24-alpine@sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b53302f905ec1c1 AS base
 
 RUN corepack enable && corepack prepare pnpm@11.25.0 --activate
 
@@ -16,14 +16,13 @@ COPY . .
 
 RUN pnpm build
 
-FROM base AS prod-deps
+FROM deps AS prod-deps
 
-RUN pnpm install --prod --frozen-lockfile
+# Dependencies are already built; pruning avoids running the dev-only Husky hook.
+RUN pnpm prune --prod --ignore-scripts
 
 
-FROM node:24-alpine AS runner
-
-RUN corepack enable && corepack prepare pnpm@latest --activate
+FROM node:24-alpine@sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b53302f905ec1c1 AS runner
 
 WORKDIR /app
 
