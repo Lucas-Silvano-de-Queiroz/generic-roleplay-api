@@ -22,7 +22,7 @@
 		"test:debug": "vitest --inspect-brk --no-file-parallelism",
 		"test:e2e": "vitest run --config ./vitest.config.e2e.ts",
 		"prepare": "husky",
-		"commit": "cz"
+		"commit": "czg"
 	},
 	"dependencies": {
 		"@nestjs/common": "^11.1.29",
@@ -56,8 +56,7 @@
 		"@types/pg": "^8.21.0",
 		"@types/supertest": "^7.2.1",
 		"@vitest/coverage-v8": "^4.1.11",
-		"commitizen": "^4.3.2",
-		"cz-conventional-changelog": "^3.3.0",
+		"czg": "^1.14.0",
 		"drizzle-kit": "^0.31.10",
 		"globals": "^17.9.0",
 		"husky": "^9.1.7",
@@ -78,10 +77,5 @@
 		"*.ts": [
 			"vitest related --run --passWithNoTests"
 		]
-	},
-	"config": {
-		"commitizen": {
-			"path": "./node_modules/cz-conventional-changelog"
-		}
 	}
 }

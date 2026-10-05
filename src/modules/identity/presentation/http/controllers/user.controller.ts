@@ -52,7 +52,11 @@ export class UserController {
 	@Delete("me")
 	@HttpCode(HTTP_CODE.NO_CONTENT)
 	@ApiBearerAuth()
-	@ApiOperation({ summary: "Excluir a conta autenticada" })
+	@ApiOperation({
+		summary: "Excluir a conta autenticada",
+		description:
+			"Exclui em cascata todos os sistemas, coleções, templates e registros preenchidos da conta, além das sessões.",
+	})
 	@ApiNoContentResponse({ description: "Conta excluída com sucesso." })
 	@ApiDeleteUserErrorResponses()
 	async delete(

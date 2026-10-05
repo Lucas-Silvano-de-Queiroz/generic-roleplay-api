@@ -7,6 +7,8 @@ import { pushSchema } from "drizzle-kit/api";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { sessions } from "modules/identity/infrastructure/database/schema/sessions.schema";
 import * as usersSchema from "modules/identity/infrastructure/database/schema/users.schema";
+import * as rpgContentSchema from "modules/rpg-content/infrastructure/database/schema/rpg-content.schema";
+import { rpgRecords } from "modules/rpg-content/infrastructure/database/schema/rpg-records.schema";
 import { rateLimits } from "modules/shared/infrastructure/database/schema/rate-limits.schema";
 import { Pool } from "pg";
 import type { TestProject } from "vitest/node";
@@ -29,7 +31,13 @@ export default async function setup(project: TestProject) {
 
 	try {
 		const result = await pushSchema(
-			{ users: usersSchema.users, sessions, rateLimits },
+			{
+				users: usersSchema.users,
+				sessions,
+				rateLimits,
+				...rpgContentSchema,
+				rpgRecords,
+			},
 			drizzle(pool),
 		);
 		await result.apply();
