@@ -3,6 +3,10 @@ import { NestFactory } from "@nestjs/core";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { AppModule } from "./app.module";
 import { env } from "./modules/shared/config/env";
+import {
+	accessCookieName,
+	refreshCookieName,
+} from "./modules/shared/infrastructure/auth/auth-cookies";
 import { configureHttpApplication } from "./modules/shared/presentation/configure-http-application";
 import { createOpenApiDocument } from "./modules/shared/presentation/create-openapi-document";
 
@@ -18,7 +22,16 @@ async function bootstrap() {
 				"API de contas e sistemas de RPG privados com coleções, templates configuráveis e registros textuais.",
 			)
 			.setVersion("1.0")
-			.addBearerAuth()
+			.addCookieAuth(
+				accessCookieName(),
+				{ type: "apiKey", in: "cookie" },
+				"cookieAuth",
+			)
+			.addCookieAuth(
+				refreshCookieName(),
+				{ type: "apiKey", in: "cookie" },
+				"refreshCookieAuth",
+			)
 			.build();
 
 		const documentFactory = () => createOpenApiDocument(app, config);

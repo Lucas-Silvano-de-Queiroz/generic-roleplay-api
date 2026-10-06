@@ -15,7 +15,7 @@ export async function recordTemplate(
 			key: "description",
 			label: "Description",
 			required: false,
-			format: "markdown",
+			format: "textarea",
 		},
 	],
 ) {

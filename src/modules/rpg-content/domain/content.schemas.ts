@@ -16,7 +16,7 @@ export const fieldDefinitionSchema = z.strictObject({
 	description: z.string().max(1000).optional(),
 	required: z.boolean().default(false),
 	maxLength: z.number().int().min(1).max(100000).optional(),
-	format: z.enum(["text", "textarea", "markdown"]).default("text"),
+	format: z.enum(["text", "textarea"]).default("text"),
 });
 
 export const fieldsSchema = z

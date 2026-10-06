@@ -11,7 +11,7 @@ import {
 	Query,
 } from "@nestjs/common";
 import {
-	ApiBearerAuth,
+	ApiCookieAuth,
 	ApiNoContentResponse,
 	ApiOperation,
 	ApiQuery,
@@ -35,7 +35,7 @@ import { ApiContentResponse } from "./content.openapi";
 import { ApiRecordBody, ApiRecordErrors } from "./records.openapi";
 @Controller()
 @ApiTags("RPG Records")
-@ApiBearerAuth()
+@ApiCookieAuth("cookieAuth")
 @ApiRecordErrors()
 export class RecordsController {
 	constructor(private readonly records: RecordsService) {}

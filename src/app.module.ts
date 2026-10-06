@@ -9,6 +9,7 @@ import { IdentityModule } from "modules/identity/identity.module";
 import { RpgContentModule } from "modules/rpg-content/rpg-content.module";
 import { DatabaseShutdownProvider } from "modules/shared/infrastructure/database/database-shutdown.provider";
 import { GlobalExceptionFilter } from "modules/shared/presentation/filters/global-exception.filter";
+import { CookieOriginGuard } from "./modules/shared/infrastructure/auth/cookie-origin.guard";
 import { IdentityRateLimitGuard } from "./modules/shared/infrastructure/auth/identity-rate-limit.guard";
 import { PostgreSqlRateLimitStore } from "./modules/shared/infrastructure/auth/postgresql-rate-limit.store";
 import { SecurityStateCleanupProvider } from "./modules/shared/infrastructure/database/security-state-cleanup.provider";
@@ -20,6 +21,7 @@ import { SecurityHeadersMiddleware } from "./modules/shared/presentation/middlew
 	controllers: [HealthController],
 	providers: [
 		PostgreSqlRateLimitStore,
+		{ provide: APP_GUARD, useClass: CookieOriginGuard },
 		{ provide: APP_GUARD, useClass: IdentityRateLimitGuard },
 		SecurityStateCleanupProvider,
 		{

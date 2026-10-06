@@ -1,33 +1,19 @@
-import { Inject, Injectable, UnauthorizedException } from "@nestjs/common";
+import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { PassportStrategy } from "@nestjs/passport";
 import { env } from "modules/shared/config/env";
-import { ExtractJwt, Strategy } from "passport-jwt";
-
-import { z } from "zod";
 import {
-	SESSION_REPOSITORY,
-	type SessionRepository,
-} from "../../domain/repositories/session.repository";
-
-interface JwtPayload {
-	sid: string;
-	exp: number;
-	sub: string;
-	tokenUse: "access";
-}
-
-export interface AuthenticatedUser {
-	id: string;
-	sessionId: string;
-}
+	accessCookieName,
+	readAuthCookie,
+} from "modules/shared/infrastructure/auth/auth-cookies";
+import type { AuthenticatedUser } from "modules/shared/presentation/decorators/current-user.decorator";
+import { Strategy } from "passport-jwt";
+import { z } from "zod";
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-	constructor(
-		@Inject(SESSION_REPOSITORY) private readonly sessions: SessionRepository,
-	) {
+	constructor() {
 		super({
-			jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+			jwtFromRequest: (request) => readAuthCookie(request, accessCookieName()),
 
 			secretOrKey: Buffer.from(env.JWT_PUBLIC_KEY_BASE64, "base64").toString(
 				"utf-8",
@@ -39,25 +25,20 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 		});
 	}
 
-	async validate(payload: JwtPayload): Promise<AuthenticatedUser> {
+	validate(payload: unknown): AuthenticatedUser {
 		const parsed = z
 			.object({
 				sub: z.uuid(),
-				sid: z.uuid(),
 				exp: z.number().int().positive(),
 				tokenUse: z.literal("access"),
 			})
 			.safeParse(payload);
-		if (
-			!parsed.success ||
-			!(await this.sessions.isActive(parsed.data.sid, parsed.data.sub))
-		) {
+		if (!parsed.success) {
 			throw new UnauthorizedException();
 		}
 
 		return {
-			id: payload.sub,
-			sessionId: payload.sid,
+			id: parsed.data.sub,
 		};
 	}
 }

@@ -15,6 +15,6 @@ export class RefreshAccessTokenUseCase {
 		private readonly tokenService: TokenServiceContract,
 	) {}
 	execute(input: RefreshAccessTokenInput): Promise<RefreshAccessTokenOutput> {
-		return this.tokenService.refreshSession(input.refreshToken);
+		return this.tokenService.refreshTokens(input.refreshToken);
 	}
 }

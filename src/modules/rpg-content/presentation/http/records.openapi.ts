@@ -10,7 +10,7 @@ import {
 import type { contentOpenApiSchemas } from "./content.openapi";
 
 const valuesDescription =
-	"Mapa textual dinâmico: keys, required e maxLength são definidos pelo template escolhido. Categorias não fixam schemas. Limite global 100.000 unidades UTF-16 por valor. Unicode, espaços e Markdown são preservados; nenhum HTML é renderizado.";
+	"Mapa textual dinâmico: keys, required e maxLength são definidos pelo template escolhido. Categorias não fixam schemas. Limite global 100.000 unidades UTF-16 por valor. Unicode, espaços e quebras de linha são preservados; nenhum HTML é renderizado.";
 const recordResponse = z.strictObject({
 	id: z.uuid(),
 	templateId: z.uuid(),
@@ -46,7 +46,7 @@ export function recordsOpenApiSchemas(): ReturnType<
 				result.description = valuesDescription;
 				result.example = {
 					name: "  Amizade  ",
-					description: "**Material**: visco\n\n✨",
+					description: "Material: visco\n\n✨",
 				};
 			}
 			if (result.properties?.values)
@@ -61,7 +61,7 @@ export function recordsOpenApiSchemas(): ReturnType<
 				};
 			if (name.endsWith("Request"))
 				result.example = {
-					values: { name: "Amizade", description: "**Material**: visco\n\n✨" },
+					values: { name: "Amizade", description: "Material: visco\n\n✨" },
 				};
 			return [name, result];
 		}),

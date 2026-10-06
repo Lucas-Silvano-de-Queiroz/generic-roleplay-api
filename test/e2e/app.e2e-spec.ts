@@ -4,6 +4,7 @@ import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { AppModule } from "../../src/app.module";
 import { configureHttpApplication } from "../../src/modules/shared/presentation/configure-http-application";
+import { accessCookie, tokensFromCookies } from "../setup/auth-cookies.fixture";
 
 describe("Users (e2e)", () => {
 	let app: INestApplication;
@@ -105,14 +106,15 @@ describe("Users (e2e)", () => {
 				.send({ name: "John Doe", email, password })
 				.expect(201);
 
-			const { body } = await request(app.getHttpServer())
+			const response = await request(app.getHttpServer())
 				.post("/auth/login")
 				.send({ email, password })
-				.expect(200);
+				.expect(204);
+			const body = tokensFromCookies(response);
 
 			await request(app.getHttpServer())
 				.delete("/users/me")
-				.set("Authorization", `Bearer ${body.accessToken}`)
+				.set("Cookie", accessCookie(body.accessToken))
 				.send({ password })
 				.expect(204);
 
@@ -127,7 +129,7 @@ describe("Users (e2e)", () => {
 			});
 		});
 
-		it("should return 401 when the token refers to a deleted user", async () => {
+		it("should return 404 when a valid access token refers to a deleted user", async () => {
 			const email = `e2e-gone-${Date.now()}@example.com`;
 			const password = "password";
 
@@ -136,26 +138,27 @@ describe("Users (e2e)", () => {
 				.send({ name: "John Doe", email, password })
 				.expect(201);
 
-			const { body } = await request(app.getHttpServer())
+			const response = await request(app.getHttpServer())
 				.post("/auth/login")
 				.send({ email, password })
-				.expect(200);
+				.expect(204);
+			const body = tokensFromCookies(response);
 
 			await request(app.getHttpServer())
 				.delete("/users/me")
-				.set("Authorization", `Bearer ${body.accessToken}`)
+				.set("Cookie", accessCookie(body.accessToken))
 				.send({ password })
 				.expect(204);
 
 			const { body: secondDelete } = await request(app.getHttpServer())
 				.delete("/users/me")
-				.set("Authorization", `Bearer ${body.accessToken}`)
+				.set("Cookie", accessCookie(body.accessToken))
 				.send({ password })
-				.expect(401);
+				.expect(404);
 
 			expect(secondDelete).toMatchObject({
-				statusCode: 401,
-				message: "Unauthorized",
+				statusCode: 404,
+				message: "User not found",
 			});
 		});
 	});

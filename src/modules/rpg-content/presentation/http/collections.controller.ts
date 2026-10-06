@@ -10,7 +10,7 @@ import {
 	Post,
 } from "@nestjs/common";
 import {
-	ApiBearerAuth,
+	ApiCookieAuth,
 	ApiNoContentResponse,
 	ApiOperation,
 	ApiTags,
@@ -35,7 +35,7 @@ import {
 
 @Controller()
 @ApiTags("RPG Collections")
-@ApiBearerAuth()
+@ApiCookieAuth("cookieAuth")
 @ApiContentErrors()
 export class CollectionsController {
 	constructor(private readonly collections: CollectionsService) {}

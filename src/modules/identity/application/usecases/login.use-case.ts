@@ -46,6 +46,6 @@ export class LoginUseCase {
 			throw new InvalidCredentialsError();
 		}
 
-		return this.tokenService.createSession(user.id);
+		return this.tokenService.issueTokens(user.id);
 	}
 }

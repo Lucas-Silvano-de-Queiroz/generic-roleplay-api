@@ -8,12 +8,12 @@ import { CreateUserUseCase } from "./application/usecases/create-user.use-case";
 import { DeleteUserUseCase } from "./application/usecases/delete-user.use-case";
 import { LoginUseCase } from "./application/usecases/login.use-case";
 import { RefreshAccessTokenUseCase } from "./application/usecases/refresh-access-token.use-case";
-import { SESSION_REPOSITORY } from "./domain/repositories/session.repository";
+import { REFRESH_TOKEN_REPOSITORY } from "./domain/repositories/refresh-token.repository";
 import { USER_REPOSITORY } from "./domain/repositories/user.repository.token";
 import { JwtAuthGuard } from "./infrastructure/auth/jwt-auth.guard";
 import { JwtTokenService } from "./infrastructure/auth/jwt-token.service";
 import { Argon2HashServiceAdapter } from "./infrastructure/crypto/argon2-hash.adapter";
-import { DrizzleSessionRepository } from "./infrastructure/database/repositories/drizzle-session.repository";
+import { DrizzleRefreshTokenRepository } from "./infrastructure/database/repositories/drizzle-refresh-token.repository";
 import { DrizzleUserRepositoryPostgreSQL } from "./infrastructure/database/repositories/drizzle-user.repository-postgresql";
 import { JwtStrategy } from "./infrastructure/passport/jwt.strategy";
 import { AuthenticationController } from "./presentation/http/controllers/authentication.controller";
@@ -40,7 +40,10 @@ import { UserController } from "./presentation/http/controllers/user.controller"
 		RefreshAccessTokenUseCase,
 		JwtTokenService,
 		JwtStrategy,
-		{ provide: SESSION_REPOSITORY, useClass: DrizzleSessionRepository },
+		{
+			provide: REFRESH_TOKEN_REPOSITORY,
+			useClass: DrizzleRefreshTokenRepository,
+		},
 		{
 			provide: USER_REPOSITORY,
 			useClass: DrizzleUserRepositoryPostgreSQL,

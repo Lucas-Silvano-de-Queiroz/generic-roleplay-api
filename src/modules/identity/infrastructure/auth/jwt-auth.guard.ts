@@ -3,11 +3,6 @@ import { Reflector } from "@nestjs/core";
 import { AuthGuard } from "@nestjs/passport";
 import { IS_PUBLIC_KEY } from "modules/shared/presentation/decorators/public.decorator";
 
-export interface AuthenticatedUser {
-	id: string;
-	sessionId: string;
-}
-
 @Injectable()
 export class JwtAuthGuard extends AuthGuard("jwt") {
 	constructor(private readonly reflector: Reflector) {

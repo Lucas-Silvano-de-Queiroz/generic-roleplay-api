@@ -10,7 +10,7 @@ import {
 	Post,
 } from "@nestjs/common";
 import {
-	ApiBearerAuth,
+	ApiCookieAuth,
 	ApiNoContentResponse,
 	ApiOperation,
 	ApiTags,
@@ -35,7 +35,7 @@ import {
 
 @Controller("rpg-systems")
 @ApiTags("RPG Systems")
-@ApiBearerAuth()
+@ApiCookieAuth("cookieAuth")
 @ApiContentErrors()
 export class SystemsController {
 	constructor(private readonly systems: SystemsService) {}

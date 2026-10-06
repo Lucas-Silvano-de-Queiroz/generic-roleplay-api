@@ -88,7 +88,7 @@ describe("RPG content repository (PostgreSQL)", () => {
 			{
 				key: "z",
 				label: "Z",
-				format: "markdown" as const,
+				format: "textarea" as const,
 				required: false,
 				description: "<script>throw 'no'</script>",
 			},

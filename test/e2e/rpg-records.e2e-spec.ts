@@ -16,6 +16,7 @@ import { rpgRecords } from "../../src/modules/rpg-content/infrastructure/databas
 import { db } from "../../src/modules/shared/infrastructure/database/drizzle";
 import { configureHttpApplication } from "../../src/modules/shared/presentation/configure-http-application";
 import { createOpenApiDocument } from "../../src/modules/shared/presentation/create-openapi-document";
+import { accessCookie, tokensFromCookies } from "../setup/auth-cookies.fixture";
 
 describe("Records HTTP and Swagger", () => {
 	let app: INestApplication, tokenA: string, tokenB: string;
@@ -33,11 +34,11 @@ describe("Records HTTP and Swagger", () => {
 				.send({ name: "Owner", email, password: "password" })
 				.expect(201);
 			userIds.push(user.id);
-			const { body } = await request(app.getHttpServer())
+			const response = await request(app.getHttpServer())
 				.post("/auth/login")
 				.send({ email, password: "password" })
-				.expect(200);
-			return body.accessToken as string;
+				.expect(204);
+			return accessCookie(tokensFromCookies(response).accessToken);
 		}
 		tokenA = await signIn();
 		tokenB = await signIn();
@@ -48,22 +49,22 @@ describe("Records HTTP and Swagger", () => {
 	});
 	const fields = [
 		{ key: "name", label: "Name", required: true, maxLength: 100 },
-		{ key: "description", label: "Description", format: "markdown" },
+		{ key: "description", label: "Description", format: "textarea" },
 	];
 	async function tree(inputFields = fields) {
 		const { body: system } = await request(app.getHttpServer())
 			.post("/rpg-systems")
-			.auth(tokenA, { type: "bearer" })
+			.set("Cookie", tokenA)
 			.send({ name: "System" })
 			.expect(201);
 		const { body: collection } = await request(app.getHttpServer())
 			.post(`/rpg-systems/${system.id}/collections`)
-			.auth(tokenA, { type: "bearer" })
+			.set("Cookie", tokenA)
 			.send({ name: "Magias", identifier: "spells" })
 			.expect(201);
 		const { body: template } = await request(app.getHttpServer())
 			.post(`/rpg-collections/${collection.id}/templates`)
-			.auth(tokenA, { type: "bearer" })
+			.set("Cookie", tokenA)
 			.send({ name: "Magia", identifier: "spell", fields: inputFields })
 			.expect(201);
 		return { system, collection, template };
@@ -73,7 +74,7 @@ describe("Records HTTP and Swagger", () => {
 		const base = `/rpg-templates/${template.id}/records`;
 		const { body: empty } = await request(app.getHttpServer())
 			.get(base)
-			.auth(tokenA, { type: "bearer" })
+			.set("Cookie", tokenA)
 			.expect(200);
 		expect(empty).toEqual({ items: [] });
 		const values = {
@@ -82,7 +83,7 @@ describe("Records HTTP and Swagger", () => {
 		};
 		const { body: record } = await request(app.getHttpServer())
 			.post(base)
-			.auth(tokenA, { type: "bearer" })
+			.set("Cookie", tokenA)
 			.send({ values })
 			.expect(201);
 		expect(record).toMatchObject({
@@ -97,7 +98,7 @@ describe("Records HTTP and Swagger", () => {
 			(
 				await request(app.getHttpServer())
 					.get(path)
-					.auth(tokenA, { type: "bearer" })
+					.set("Cookie", tokenA)
 					.expect(200)
 			).body,
 		).toEqual(record);
@@ -109,25 +110,25 @@ describe("Records HTTP and Swagger", () => {
 				(
 					await request(app.getHttpServer())
 						.patch(path)
-						.auth(tokenA, { type: "bearer" })
+						.set("Cookie", tokenA)
 						.send(input)
 						.expect(200)
 				).body,
 			).toEqual(record);
 		const { body: updated } = await request(app.getHttpServer())
 			.patch(path)
-			.auth(tokenA, { type: "bearer" })
+			.set("Cookie", tokenA)
 			.send({ values: { name: "Amizade" } })
 			.expect(200);
 		expect(updated.values).toEqual({ name: "Amizade" });
 		expect(updated.createdAt).toBe(record.createdAt);
 		await request(app.getHttpServer())
 			.delete(path)
-			.auth(tokenA, { type: "bearer" })
+			.set("Cookie", tokenA)
 			.expect(204);
 		await request(app.getHttpServer())
 			.get(path)
-			.auth(tokenA, { type: "bearer" })
+			.set("Cookie", tokenA)
 			.expect(404);
 	});
 	it("authenticates all routes and returns identical missing and foreign 404s", async () => {
@@ -135,7 +136,7 @@ describe("Records HTTP and Swagger", () => {
 		const nested = `/rpg-templates/${template.id}/records`;
 		const { body: record } = await request(app.getHttpServer())
 			.post(nested)
-			.auth(tokenA, { type: "bearer" })
+			.set("Cookie", tokenA)
 			.send({ values: { name: "Secret" } })
 			.expect(201);
 		const direct = `/rpg-records/${record.id}`;
@@ -149,7 +150,7 @@ describe("Records HTTP and Swagger", () => {
 			await request(app.getHttpServer())[method](path).send(input).expect(401);
 			const foreign = await request(app.getHttpServer())
 				[method](path)
-				.auth(tokenB, { type: "bearer" })
+				.set("Cookie", tokenB)
 				.send(input)
 				.expect(404);
 			const missing = await request(app.getHttpServer())
@@ -158,7 +159,7 @@ describe("Records HTTP and Swagger", () => {
 						.replace(template.id, randomUUID())
 						.replace(record.id, randomUUID()),
 				)
-				.auth(tokenB, { type: "bearer" })
+				.set("Cookie", tokenB)
 				.send(input)
 				.expect(404);
 			expect(foreign.body).toEqual(missing.body);
@@ -185,7 +186,7 @@ describe("Records HTTP and Swagger", () => {
 		]) {
 			const { body } = await request(app.getHttpServer())
 				.post(base)
-				.auth(tokenA, { type: "bearer" })
+				.set("Cookie", tokenA)
 				.send(input)
 				.expect(400);
 			expect(body.message).toBe("Validation failed");
@@ -202,22 +203,22 @@ describe("Records HTTP and Swagger", () => {
 		]) {
 			await request(app.getHttpServer())
 				.get(`${base}?${query}`)
-				.auth(tokenA, { type: "bearer" })
+				.set("Cookie", tokenA)
 				.expect(400);
 		}
 		for (const path of ["/rpg-records/bad", "/rpg-templates/bad/records"])
 			await request(app.getHttpServer())
 				.get(path)
-				.auth(tokenA, { type: "bearer" })
+				.set("Cookie", tokenA)
 				.expect(400);
 		await request(app.getHttpServer())
 			.post(base)
-			.auth(tokenA, { type: "bearer" })
+			.set("Cookie", tokenA)
 			.send({ values: { name: "x", description: "x".repeat(103000) } })
 			.expect(413);
 		const { body: record } = await request(app.getHttpServer())
 			.post(base)
-			.auth(tokenA, { type: "bearer" })
+			.set("Cookie", tokenA)
 			.send({ values: { name: "x" } })
 			.expect(201);
 		for (const input of [
@@ -228,7 +229,7 @@ describe("Records HTTP and Swagger", () => {
 		])
 			await request(app.getHttpServer())
 				.patch(`/rpg-records/${record.id}`)
-				.auth(tokenA, { type: "bearer" })
+				.set("Cookie", tokenA)
 				.send(input)
 				.expect(400);
 	});
@@ -237,12 +238,12 @@ describe("Records HTTP and Swagger", () => {
 		const base = `/rpg-templates/${template.id}/records`;
 		const { body: record } = await request(app.getHttpServer())
 			.post(base)
-			.auth(tokenA, { type: "bearer" })
+			.set("Cookie", tokenA)
 			.send({ values: { name: "Secret" } })
 			.expect(201);
 		const { body: error } = await request(app.getHttpServer())
 			.patch(`/rpg-templates/${template.id}`)
-			.auth(tokenA, { type: "bearer" })
+			.set("Cookie", tokenA)
 			.send({ fields: [] })
 			.expect(409);
 		expect(error).toEqual({
@@ -259,7 +260,7 @@ describe("Records HTTP and Swagger", () => {
 		);
 		const { body: quota } = await request(app.getHttpServer())
 			.post(base)
-			.auth(tokenA, { type: "bearer" })
+			.set("Cookie", tokenA)
 			.send({ values: { name: "x" } })
 			.expect(409);
 		expect(quota).toEqual({ statusCode: 409, message: "Record limit reached" });
@@ -273,17 +274,17 @@ describe("Records HTTP and Swagger", () => {
 			.values(ids.map((id) => ({ id, templateId: template.id, values: {} })));
 		const { body: first } = await request(app.getHttpServer())
 			.get(base)
-			.auth(tokenA, { type: "bearer" })
+			.set("Cookie", tokenA)
 			.expect(200);
 		expect(first.items).toHaveLength(50);
 		expect(first.nextCursor).toBe(ids[49]);
 		const { body: second } = await request(app.getHttpServer())
 			.get(`${base}?cursor=${first.nextCursor}`)
-			.auth(tokenA, { type: "bearer" })
+			.set("Cookie", tokenA)
 			.expect(200);
 		const { body: last } = await request(app.getHttpServer())
 			.get(`${base}?cursor=${second.nextCursor}`)
-			.auth(tokenA, { type: "bearer" })
+			.set("Cookie", tokenA)
 			.expect(200);
 		expect(
 			[...first.items, ...second.items, ...last.items].map((r) => r.id),
@@ -291,32 +292,32 @@ describe("Records HTTP and Swagger", () => {
 		expect(last).not.toHaveProperty("nextCursor");
 		const foreignTree = await request(app.getHttpServer())
 			.post("/rpg-systems")
-			.auth(tokenB, { type: "bearer" })
+			.set("Cookie", tokenB)
 			.send({ name: "Other" })
 			.expect(201);
 		const { body: collection } = await request(app.getHttpServer())
 			.post(`/rpg-systems/${foreignTree.body.id}/collections`)
-			.auth(tokenB, { type: "bearer" })
+			.set("Cookie", tokenB)
 			.send({ name: "Other", identifier: "other" })
 			.expect(201);
 		const { body: other } = await request(app.getHttpServer())
 			.post(`/rpg-collections/${collection.id}/templates`)
-			.auth(tokenB, { type: "bearer" })
+			.set("Cookie", tokenB)
 			.send({ name: "Other", identifier: "other" })
 			.expect(201);
 		const { body: foreign } = await request(app.getHttpServer())
 			.post(`/rpg-templates/${other.id}/records`)
-			.auth(tokenB, { type: "bearer" })
+			.set("Cookie", tokenB)
 			.send({ values: {} })
 			.expect(201);
 		await request(app.getHttpServer())
 			.delete(`/rpg-records/${ids[50]}`)
-			.auth(tokenA, { type: "bearer" })
+			.set("Cookie", tokenA)
 			.expect(204);
 		for (const cursor of [ids[50], foreign.id, randomUUID()]) {
 			const { body: page } = await request(app.getHttpServer())
 				.get(`${base}?limit=100&cursor=${cursor}`)
-				.auth(tokenA, { type: "bearer" })
+				.set("Cookie", tokenA)
 				.expect(200);
 			expect(page.items.map((r: { id: string }) => r.id)).toEqual(
 				ids.filter((id) => id !== ids[50] && id > cursor),
@@ -328,7 +329,7 @@ describe("Records HTTP and Swagger", () => {
 			const parents = await tree([]);
 			const { body: record } = await request(app.getHttpServer())
 				.post(`/rpg-templates/${parents.template.id}/records`)
-				.auth(tokenA, { type: "bearer" })
+				.set("Cookie", tokenA)
 				.send({ values: {} })
 				.expect(201);
 			const path =
@@ -339,21 +340,25 @@ describe("Records HTTP and Swagger", () => {
 						: "rpg-systems";
 			await request(app.getHttpServer())
 				.delete(`/${path}/${parents[parent].id}`)
-				.auth(tokenA, { type: "bearer" })
+				.set("Cookie", tokenA)
 				.expect(204);
 			await request(app.getHttpServer())
 				.get(`/rpg-records/${record.id}`)
-				.auth(tokenA, { type: "bearer" })
+				.set("Cookie", tokenA)
 				.expect(404);
 		}
 	});
-	it("documents dynamic values, pagination, bearer auth and all five operations", () => {
+	it("documents dynamic values, pagination, cookie auth and all five operations", () => {
 		const doc = createOpenApiDocument(
 			app,
 			new DocumentBuilder()
 				.setTitle("Test")
 				.setVersion("1")
-				.addBearerAuth()
+				.addCookieAuth(
+					"grp-access",
+					{ type: "apiKey", in: "cookie" },
+					"cookieAuth",
+				)
 				.build(),
 		);
 		const schemas = doc.components?.schemas as Record<
@@ -393,7 +398,7 @@ describe("Records HTTP and Swagger", () => {
 			["/rpg-records/{recordId}", "delete"],
 		] as const) {
 			const op = doc.paths[path][method];
-			expect(op?.security).toContainEqual({ bearer: [] });
+			expect(op?.security).toContainEqual({ cookieAuth: [] });
 			for (const code of ["400", "401", "404", "409", "413"])
 				expect(op?.responses).toHaveProperty(code);
 		}

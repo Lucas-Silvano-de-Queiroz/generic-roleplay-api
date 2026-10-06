@@ -17,7 +17,7 @@ export class HealthController {
 	async ready(): Promise<{ status: "ready" }> {
 		try {
 			const result = await db.execute<{ ready: boolean }>(
-				sql`SELECT to_regclass('public.sessions') IS NOT NULL AND to_regclass('public.rate_limits') IS NOT NULL AS ready`,
+				sql`SELECT to_regclass('public.refresh_tokens') IS NOT NULL AND to_regclass('public.rate_limits') IS NOT NULL AS ready`,
 			);
 			if (result.rows[0]?.ready) return { status: "ready" };
 		} catch {

@@ -26,18 +26,3 @@ export abstract class LoginDto {
 	})
 	abstract password: string;
 }
-
-export class LoginResponseDto {
-	@ApiProperty({
-		description: "Token de acesso JWT, válido por 15 minutos.",
-	})
-	accessToken!: string;
-
-	@ApiProperty({
-		description: "Token para obter novos access tokens, válido por 15 dias.",
-	})
-	refreshToken!: string;
-
-	@ApiProperty({ example: "Bearer" })
-	tokenType!: "Bearer";
-}

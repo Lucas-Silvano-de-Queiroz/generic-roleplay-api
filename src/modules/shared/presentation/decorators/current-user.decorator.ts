@@ -6,7 +6,6 @@ export abstract class AuthenticatedUser {
 	 * @example "01a3c1d6-..."
 	 */
 	abstract id: string;
-	abstract sessionId: string;
 }
 
 export const CurrentUser = createParamDecorator(

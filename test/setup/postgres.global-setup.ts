@@ -5,7 +5,7 @@ import {
 } from "@testcontainers/postgresql";
 import { pushSchema } from "drizzle-kit/api";
 import { drizzle } from "drizzle-orm/node-postgres";
-import { sessions } from "modules/identity/infrastructure/database/schema/sessions.schema";
+import { refreshTokens } from "modules/identity/infrastructure/database/schema/refresh-tokens.schema";
 import * as usersSchema from "modules/identity/infrastructure/database/schema/users.schema";
 import * as rpgContentSchema from "modules/rpg-content/infrastructure/database/schema/rpg-content.schema";
 import { rpgRecords } from "modules/rpg-content/infrastructure/database/schema/rpg-records.schema";
@@ -33,7 +33,7 @@ export default async function setup(project: TestProject) {
 		const result = await pushSchema(
 			{
 				users: usersSchema.users,
-				sessions,
+				refreshTokens,
 				rateLimits,
 				...rpgContentSchema,
 				rpgRecords,

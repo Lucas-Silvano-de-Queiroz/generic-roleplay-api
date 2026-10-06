@@ -36,7 +36,7 @@ describe("Template compatibility and concurrent records", () => {
 	it("rejects incompatible fields atomically without changing timestamps or values", async () => {
 		const { template } = await recordTemplate(owner);
 		const record = await records.create(owner, template.id, {
-			values: { name: "Amizade", description: "Markdown" },
+			values: { name: "Amizade", description: "Texto longo" },
 		});
 		for (const fields of [
 			[],
@@ -76,7 +76,7 @@ describe("Template compatibility and concurrent records", () => {
 				key: "extra",
 				label: "Extra",
 				required: false,
-				format: "markdown" as const,
+				format: "textarea" as const,
 			},
 			{
 				...nameField,

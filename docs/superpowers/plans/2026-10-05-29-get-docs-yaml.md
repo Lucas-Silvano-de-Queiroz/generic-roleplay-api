@@ -1,0 +1,93 @@
+# GET /docs-yaml — Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans para uma reprodução autorizada deste plan, tarefa por tarefa. As etapas usam checkboxes. Esta entrega é documental: as etapas abaixo descrevem a implementação já existente e sua conferência; não autorizam mudança do runtime.
+
+**Goal:** Servir a documentação da própria API em text/yaml, quando o bootstrap está em desenvolvimento.
+
+**Architecture:** Bootstrap NestJS com registro de Swagger direto no adapter; factory combina metadata dos controllers e schemas de conteúdo/registros.
+
+**Tech Stack:** TypeScript, NestJS 11, Express, Zod 4, PostgreSQL, Drizzle ORM; Vitest/Supertest; JWT RS256 e Argon2id nas operações de identidade que os utilizam.
+
+**Spec:** [2026-10-05-29-get-docs-yaml.md](../specs/2026-10-05-29-get-docs-yaml.md). Ler também [api-contracts.md](../api-contracts.md).
+
+## Global Constraints
+
+- Trabalhar somente em `generic-roleplay-api`.
+- Usar o comportamento do working tree em 2026-10-05; o HEAD sozinho não inclui todas as alterações locais.
+- Este plan é descritivo da implementação atual. Os arquivos de runtime e testes listados já existem; não criar, refatorar ou alterar código ao executar apenas a conferência documental.
+- Cookies, validações, defaults, ownership, timestamps, quotas e mensagens devem manter os valores da spec e do contrato compartilhado.
+- Comandos são relativos à raiz da API. Integração/E2E exigem Docker para o PostgreSQL temporário do Testcontainers; não aplicar migrations no banco de desenvolvimento para esta tarefa.
+- Checkboxes representam passos de conferência/reprodução, não alegações de testes executados nesta entrega.
+
+## Review Focus
+
+- NODE_ENV=production → setup não executado; conferir main.ts.
+- Documento → inclui schemas complementares de conteúdo e records.
+- Autenticação documentada → dois esquemas cookie; access/refresh separados.
+- JSON/YAML → mesmo documento da factory; biblioteca registra ambos por raw=true.
+- UI/aliases/assets → servidos pela biblioteca sob /docs; nenhuma visualização necessária para a conferência.
+
+Cada condição deve ser confrontada com o código vinculado e com as evidências da tarefa 3. Quando não há teste existente para a condição, a conferência é estática; a lacuna fica explicitada na spec, sem inventar cobertura ou ampliar o escopo.
+
+---
+
+## Tarefa 1: Contrato HTTP e acesso
+
+**Arquivos existentes para leitura:**
+- [src/main.ts](../../../src/main.ts).
+- [api-contracts.md](../api-contracts.md) e as fontes dos guards/pipes nele vinculadas.
+
+**Interfaces:**
+- Consome: método `GET`, caminho `/docs-yaml` e entradas descritas na spec.
+- Produz: chamada `SwaggerModule.setup` com as entradas validadas declaradas; resposta `200` com Content-Type `text/yaml` em desenvolvimento. Documento OpenAPI com paths dos controllers e schemas compartilhados.
+
+- [ ] Conferir o registro do método/caminho e a condição de acesso: Registrada diretamente no adapter; não exige access/refresh. NODE_ENV=production não registra Swagger.
+- [ ] Conferir campo por campo a tabela de requisição da spec, inclusive diferenças entre omissão, null, extras e defaults quando aplicáveis.
+- [ ] No bootstrap, condicionar setup a env.isDevelopment; criar DocumentBuilder com título Generic Roleplay API, descrição de contas/conteúdo privado, versão 1.0 e dois esquemas apiKey em cookie (cookieAuth/refreshCookieAuth).
+- [ ] Conferir status, corpo e headers no handler, no filtro/middleware ou no registro direto do adapter, conforme a spec.
+
+## Tarefa 2: Aplicação e persistência
+
+**Arquivos existentes para leitura:**
+
+- [src/modules/shared/presentation/create-openapi-document.ts](../../../src/modules/shared/presentation/create-openapi-document.ts)
+- [src/modules/rpg-content/presentation/http/content.openapi.ts](../../../src/modules/rpg-content/presentation/http/content.openapi.ts)
+- [src/modules/rpg-content/presentation/http/records.openapi.ts](../../../src/modules/rpg-content/presentation/http/records.openapi.ts)
+- [node_modules/@nestjs/swagger/dist/swagger-module.js](../../../node_modules/@nestjs/swagger/dist/swagger-module.js)
+
+**Interfaces:**
+
+- `createOpenApiDocument(app: INestApplication, config: Omit<OpenAPIObject, "paths">): OpenAPIObject`
+- `SwaggerModule.setup("docs", app, documentFactory)` em main.ts.
+
+- [ ] Factory chama createOpenApiDocument(app,config), que usa SwaggerModule.createDocument e acrescenta contentOpenApiSchemas()/recordsOpenApiSchemas() aos components.schemas.
+- [ ] SwaggerModule.setup("docs",app,documentFactory) usa defaults ui=true e raw=true; adapter registra as rotas fora de controllers/guards.
+- [ ] A biblioteca guarda o documento produzido pela factory para reutilização; não consulta o banco para cada GET.
+- [ ] Serializar o mesmo documento com jsyaml.dump({skipInvalid:true,noRefs:true}) e Content-Type text/yaml no caminho padrão <setup-path>-yaml.
+- [ ] Conferir cada linha da tabela de erros da spec no ponto que a produz; não inferir erros próprios de uma rota a partir do grupo de decorators OpenAPI.
+- [ ] Confrontar os cinco itens de Review Focus com os predicados, schemas e guards relevantes; registrar como conferência estática o que os testes existentes não exercitam.
+
+## Tarefa 3: Evidências e verificação
+
+**Arquivos de testes existentes:**
+
+- [test/e2e/rpg-content.e2e-spec.ts](../../../test/e2e/rpg-content.e2e-spec.ts)
+- [test/e2e/rpg-records.e2e-spec.ts](../../../test/e2e/rpg-records.e2e-spec.ts)
+
+**Interfaces:**
+- Consome: spec e fluxo das tarefas 1–2; testes já existentes e configuração Vitest da API.
+- Produz: evidência de correspondência entre contrato e implementação; quando executados, saída de teste com exit code 0 e nenhuma falha, ou relato concreto da limitação.
+
+- [ ] Conferir `documents every route, strict bodies, errors and field defaults in OpenAPI` em [test/e2e/rpg-content.e2e-spec.ts](../../../test/e2e/rpg-content.e2e-spec.ts): createOpenApiDocument contém paths de conteúdo, default fields e cookieAuth.
+- [ ] Conferir `documents dynamic values, pagination, cookie auth and all five operations` em [test/e2e/rpg-records.e2e-spec.ts](../../../test/e2e/rpg-records.e2e-spec.ts): createOpenApiDocument inclui records, query limit/cursor e respostas de cascata.
+
+- [ ] Executar os comandos pertinentes abaixo. Esperado: Vitest conclui com exit code 0 e testes selecionados sem falhas; não usar este texto como evidência de que foram executados.
+
+```sh
+pnpm exec vitest run --config ./vitest.config.e2e.ts test/e2e/rpg-content.e2e-spec.ts test/e2e/rpg-records.e2e-spec.ts
+```
+
+- [ ] Conferir links e cobertura documental: esta rota deve possuir exatamente uma spec e um plan no [índice](../README.md).
+- [ ] Confirmar que a conferência não alterou runtime, testes ou migrations; manter alterações locais preexistentes.
+
+**Limite de cobertura:** Os testes existentes validam a geração do objeto OpenAPI, não GET dos endpoints de Swagger nem bootstrap de produção. Registro, formato e aliases foram conferidos estaticamente em main.ts e na biblioteca local instalada. Headers/exceções de handlers diretos do adapter não devem ser confundidos com os filtros dos controllers.

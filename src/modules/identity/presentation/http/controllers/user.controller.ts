@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, HttpCode, Post } from "@nestjs/common";
 import {
-	ApiBearerAuth,
+	ApiCookieAuth,
 	ApiCreatedResponse,
 	ApiNoContentResponse,
 	ApiOperation,
@@ -51,11 +51,11 @@ export class UserController {
 
 	@Delete("me")
 	@HttpCode(HTTP_CODE.NO_CONTENT)
-	@ApiBearerAuth()
+	@ApiCookieAuth("cookieAuth")
 	@ApiOperation({
 		summary: "Excluir a conta autenticada",
 		description:
-			"Exclui em cascata todos os sistemas, coleções, templates e registros preenchidos da conta, além das sessões.",
+			"Exclui em cascata todos os sistemas, coleções, templates e registros preenchidos da conta, além dos refresh tokens. Access tokens já emitidos continuam válidos até expirar.",
 	})
 	@ApiNoContentResponse({ description: "Conta excluída com sucesso." })
 	@ApiDeleteUserErrorResponses()

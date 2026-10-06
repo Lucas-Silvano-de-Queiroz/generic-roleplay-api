@@ -50,6 +50,26 @@ const envSchema = z.object({
 			"Trusted proxies must be explicit IPs/CIDRs, without /0",
 		),
 	AUTH_GLOBAL_LIMIT: z.coerce.number().int().min(10).max(1200).default(1200),
+	AUTH_ALLOWED_ORIGINS: z
+		.string()
+		.max(4096)
+		.default("")
+		.refine(
+			(value) =>
+				value === "" ||
+				value.split(",").every((entry) => {
+					try {
+						const origin = new URL(entry.trim());
+						return (
+							["http:", "https:"].includes(origin.protocol) &&
+							origin.origin === entry.trim()
+						);
+					} catch {
+						return false;
+					}
+				}),
+			"Allowed origins must be explicit HTTP(S) origins without paths or wildcards",
+		),
 });
 
 const result = envSchema.safeParse(process.env);

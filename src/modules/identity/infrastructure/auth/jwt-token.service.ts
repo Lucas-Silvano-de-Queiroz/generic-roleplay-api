@@ -9,13 +9,12 @@ import type {
 } from "../../application/contracts/token-service.contract.token";
 import { InvalidCredentialsError } from "../../application/errors/invalid-credentials.error";
 import {
-	SESSION_REPOSITORY,
-	type SessionRepository,
-} from "../../domain/repositories/session.repository";
+	REFRESH_TOKEN_REPOSITORY,
+	type RefreshTokenRepository,
+} from "../../domain/repositories/refresh-token.repository";
 
 const refreshPayloadSchema = z.object({
 	sub: z.uuid(),
-	sid: z.uuid(),
 	jti: z.uuid(),
 	tokenUse: z.literal("refresh"),
 	exp: z.number().int().positive(),
@@ -25,25 +24,23 @@ export class JwtTokenService implements TokenServiceContract {
 	private readonly logger = new Logger(JwtTokenService.name);
 	constructor(
 		private readonly jwtService: JwtService,
-		@Inject(SESSION_REPOSITORY) private readonly sessions: SessionRepository,
+		@Inject(REFRESH_TOKEN_REPOSITORY)
+		private readonly refreshTokenRepository: RefreshTokenRepository,
 	) {}
-	async createSession(userId: string): Promise<TokenPair> {
-		const sessionId = randomUUID();
+	async issueTokens(userId: string): Promise<TokenPair> {
 		const expiresAt = Math.floor(Date.now() / 1000) + 15 * 24 * 60 * 60;
-		const tokens = await this.signPair(userId, sessionId, expiresAt);
-		await this.sessions.create({
-			id: sessionId,
+		const tokens = await this.signPair(userId, expiresAt);
+		await this.refreshTokenRepository.create({
 			userId,
 			tokenHash: this.digest(tokens.refreshToken),
 			expiresAt: new Date(expiresAt * 1000),
 		});
-		this.logger.log({ event: "session_created", userId, sessionId });
+		this.logger.log({ event: "tokens_issued", userId });
 		return tokens;
 	}
-	async refreshSession(token: string): Promise<TokenPair> {
-		let payload: z.infer<typeof refreshPayloadSchema>;
+	private async verifyRefreshToken(token: string) {
 		try {
-			payload = refreshPayloadSchema.parse(
+			return refreshPayloadSchema.parse(
 				await this.jwtService.verifyAsync(token, {
 					algorithms: ["RS256"],
 					issuer: env.JWT_ISSUER,
@@ -53,38 +50,35 @@ export class JwtTokenService implements TokenServiceContract {
 		} catch {
 			throw new InvalidCredentialsError();
 		}
-		const tokens = await this.signPair(payload.sub, payload.sid, payload.exp);
-		const result = await this.sessions.rotate(
-			payload.sid,
-			payload.sub,
+	}
+	async refreshTokens(token: string): Promise<TokenPair> {
+		const payload = await this.verifyRefreshToken(token);
+		const tokens = await this.signPair(payload.sub, payload.exp);
+		const rotated = await this.refreshTokenRepository.rotate(
 			this.digest(token),
-			this.digest(tokens.refreshToken),
+			{
+				userId: payload.sub,
+				tokenHash: this.digest(tokens.refreshToken),
+				expiresAt: new Date(payload.exp * 1000),
+			},
 		);
-		if (result !== "rotated") {
-			if (result === "replay")
-				this.logger.warn({
-					event: "refresh_replay",
-					userId: payload.sub,
-					sessionId: payload.sid,
-				});
+		if (!rotated) {
+			this.logger.warn({ event: "refresh_rejected", userId: payload.sub });
 			throw new InvalidCredentialsError();
 		}
-		this.logger.log({ event: "session_refreshed", sessionId: payload.sid });
+		this.logger.log({ event: "tokens_refreshed", userId: payload.sub });
 		return tokens;
 	}
-	async revokeSession(userId: string, sessionId: string): Promise<void> {
-		await this.sessions.revoke(sessionId, userId);
-		this.logger.log({ event: "session_revoked", userId, sessionId });
+	async revokeRefreshToken(token: string): Promise<void> {
+		const payload = await this.verifyRefreshToken(token);
+		await this.refreshTokenRepository.revoke(this.digest(token), payload.sub);
+		this.logger.log({ event: "refresh_token_revoked", userId: payload.sub });
 	}
-	private async signPair(
-		sub: string,
-		sid: string,
-		exp: number,
-	): Promise<TokenPair> {
+	private async signPair(sub: string, exp: number): Promise<TokenPair> {
 		const [accessToken, refreshToken] = await Promise.all([
-			this.jwtService.signAsync({ sub, sid, tokenUse: "access" }),
+			this.jwtService.signAsync({ sub, tokenUse: "access" }),
 			this.jwtService.signAsync(
-				{ sub, sid, jti: randomUUID(), tokenUse: "refresh" },
+				{ sub, jti: randomUUID(), tokenUse: "refresh" },
 				{ expiresIn: exp - Math.floor(Date.now() / 1000) },
 			),
 		]);

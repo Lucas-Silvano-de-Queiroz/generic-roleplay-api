@@ -30,7 +30,7 @@ export class SecurityStateCleanupProvider
 				sql`DELETE FROM rate_limits WHERE key IN (SELECT key FROM rate_limits WHERE reset_at < now() ORDER BY reset_at LIMIT 4096 FOR UPDATE SKIP LOCKED)`,
 			);
 			await db.execute(
-				sql`DELETE FROM sessions WHERE id IN (SELECT id FROM sessions WHERE expires_at < now() ORDER BY expires_at LIMIT 1000 FOR UPDATE SKIP LOCKED)`,
+				sql`DELETE FROM refresh_tokens WHERE token_hash IN (SELECT token_hash FROM refresh_tokens WHERE expires_at < now() ORDER BY expires_at LIMIT 1000 FOR UPDATE SKIP LOCKED)`,
 			);
 		} catch {
 			this.logger.error({ event: "security_state_cleanup_failed" });

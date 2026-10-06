@@ -54,13 +54,13 @@ describe("Content contracts", () => {
 			fields: [{ key: "name", label: "Nome", required: false, format: "text" }],
 		});
 	});
-	it("preserves field order, defaults and Markdown text", () => {
+	it("preserves field order, defaults and literal text", () => {
 		const fields = [
 			{
 				key: "z",
 				label: "Z",
 				description: "<script>alert(1)</script> **text**",
-				format: "markdown",
+				format: "textarea",
 			},
 			{
 				key: "a",
@@ -86,6 +86,7 @@ describe("Content contracts", () => {
 		{ key: "name", label: "Name", required: "false" },
 		{ key: "name", label: "Name", required: null },
 		{ key: "name", label: "Name", format: "html" },
+		{ key: "name", label: "Name", format: "markdown" },
 		{ key: "name", label: "Name", format: null },
 		{ key: "name", label: "Name", banana: true },
 		...[0, -1, 1.5, 100001, "10", null].map((maxLength) => ({

@@ -5,6 +5,11 @@ import { SecurityHeadersMiddleware } from "./middleware/security-headers.middlew
 /** Register before app.init/listen so parser failures receive the same protections. */
 export function configureHttpApplication(app: INestApplication): void {
 	app.use(new SecurityHeadersMiddleware().use);
+	const allowedOrigins = env.AUTH_ALLOWED_ORIGINS.split(",")
+		.map((value) => value.trim())
+		.filter(Boolean);
+	if (allowedOrigins.length)
+		app.enableCors({ origin: allowedOrigins, credentials: true });
 	app
 		.getHttpAdapter()
 		.getInstance()

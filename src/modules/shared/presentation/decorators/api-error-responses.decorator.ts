@@ -74,17 +74,13 @@ export const ApiLoginErrorResponses = () =>
 		},
 	);
 
-export const ApiRefreshErrorResponses = () =>
+export const ApiRefreshErrorResponses = (isLogout = false) =>
 	apiErrorResponses(
 		{
-			statusCode: 400,
-			description: "Refresh token ausente.",
-			example: validationExample("refreshToken", "Refresh token is required"),
-		},
-		{
 			statusCode: 401,
-			description:
-				"Refresh token inválido, expirado ou associado a conta inexistente.",
+			description: isLogout
+				? "Cookie de refresh inválido, expirado ou de tipo incorreto. Cookie ausente encerra o acesso local com 204."
+				: "Cookie de refresh ausente, inválido, expirado, consumido, revogado ou associado a conta inexistente.",
 			example: { statusCode: 401, message: "Invalid credentials" },
 		},
 		{

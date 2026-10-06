@@ -54,6 +54,45 @@ describe("RPG content migration", () => {
 				created_at: expect.any(Date),
 				updated_at: expect.any(Date),
 			});
+			const legacyFields = [
+				{ key: "name", label: "Nome", required: true, format: "text" },
+				{
+					key: "description",
+					label: "Descrição",
+					description: "Texto literal **sem conversão**",
+					maxLength: 1000,
+					required: false,
+					format: "markdown",
+				},
+				{ key: "notes", label: "Notas", format: "textarea" },
+			];
+			await client.query("UPDATE rpg_templates SET fields = $1 WHERE id = $2", [
+				JSON.stringify(legacyFields),
+				template,
+			]);
+			const migration = readFileSync(
+				"drizzle/20261005_remove_markdown_format.sql",
+				"utf8",
+			);
+			await client.query(migration);
+			const converted = await client.query(
+				"SELECT * FROM rpg_templates WHERE id = $1",
+				[template],
+			);
+			expect(converted.rows[0].fields).toEqual([
+				legacyFields[0],
+				{ ...legacyFields[1], format: "textarea" },
+				legacyFields[2],
+			]);
+			expect(converted.rows[0].created_at).toEqual(created.rows[0].created_at);
+			await client.query(migration);
+			expect(
+				(
+					await client.query("SELECT * FROM rpg_templates WHERE id = $1", [
+						template,
+					])
+				).rows,
+			).toEqual(converted.rows);
 			await expect(
 				client.query(
 					"INSERT INTO rpg_templates (id, collection_id, name, identifier) VALUES ($1, $2, 'Outro', 'spell')",

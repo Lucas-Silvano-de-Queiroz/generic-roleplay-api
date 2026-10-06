@@ -3,7 +3,6 @@ import { Email } from "../../../domain/value-objects/email.vo";
 import { createUserSchema } from "./create-user.dto";
 import { deleteUserSchema } from "./delete-user.dto";
 import { loginSchema } from "./login.dto";
-import { refreshTokenSchema } from "./refresh-token.dto";
 
 describe("Identity input limits", () => {
 	it.each([" ", "a".repeat(256)])(
@@ -40,11 +39,6 @@ describe("Identity input limits", () => {
 			loginSchema.safeParse({ email: "a@example.com", password }).success,
 		).toBe(false);
 		expect(deleteUserSchema.safeParse({ password }).success).toBe(false);
-	});
-	it("rejects oversized refresh tokens", () => {
-		expect(
-			refreshTokenSchema.safeParse({ refreshToken: "a".repeat(4097) }).success,
-		).toBe(false);
 	});
 	it("rejects oversized e-mails at the domain boundary", () => {
 		expect(() => Email.create(`${"a".repeat(256)}@example.com`)).toThrow();

@@ -1,18 +1,51 @@
-import type { INestApplication } from "@nestjs/common";
+import { createHash, randomUUID } from "node:crypto";
+import { Controller, Get, type INestApplication } from "@nestjs/common";
+import { JwtService } from "@nestjs/jwt";
 import { Test } from "@nestjs/testing";
 import { sql } from "drizzle-orm";
 import request from "supertest";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import {
+	afterAll,
+	beforeAll,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	vi,
+} from "vitest";
 import { AppModule } from "../../src/app.module";
-import { db } from "../../src/modules/shared/infrastructure/database/drizzle";
+import {
+	db,
+	pool,
+} from "../../src/modules/shared/infrastructure/database/drizzle";
 import { configureHttpApplication } from "../../src/modules/shared/presentation/configure-http-application";
+import {
+	type AuthenticatedUser,
+	CurrentUser,
+} from "../../src/modules/shared/presentation/decorators/current-user.decorator";
+import {
+	accessCookie,
+	refreshCookie,
+	tokensFromCookies,
+} from "../setup/auth-cookies.fixture";
 
-describe("Session security (e2e)", () => {
+@Controller("auth-probe")
+class AuthProbeController {
+	@Get()
+	user(@CurrentUser() user: AuthenticatedUser) {
+		return user;
+	}
+}
+
+describe("Token authentication (e2e)", () => {
 	let app: INestApplication;
+	let jwt: JwtService;
 	beforeAll(async () => {
 		const module = await Test.createTestingModule({
 			imports: [AppModule],
+			controllers: [AuthProbeController],
 		}).compile();
+		jwt = module.get(JwtService);
 		app = module.createNestApplication();
 		configureHttpApplication(app);
 		await app.init();
@@ -81,27 +114,30 @@ describe("Session security (e2e)", () => {
 		for (let i = 0; i < 30; i++)
 			await request(app.getHttpServer())
 				.post("/auth/refresh")
-				.send({ refreshToken: "invalid" })
+				.set("Cookie", refreshCookie("invalid"))
 				.expect(401);
 		await request(app.getHttpServer())
 			.post("/auth/refresh")
-			.send({ refreshToken: "invalid" })
+			.set("Cookie", refreshCookie("invalid"))
 			.expect(429);
 	});
-	it("does not revoke a valid session when an unsigned or access token is presented as refresh", async () => {
+	it("does not revoke a valid refresh token when an unsigned or access token is presented as refresh", async () => {
 		const tokens = await login("forged-refresh");
 		await request(app.getHttpServer())
 			.post("/auth/refresh")
-			.send({ refreshToken: tokens.accessToken })
+			.set("Cookie", refreshCookie(tokens.accessToken))
 			.expect(401);
 		await request(app.getHttpServer())
 			.post("/auth/refresh")
-			.send({ refreshToken: `${tokens.refreshToken.slice(0, -8)}invalid!` })
+			.set(
+				"Cookie",
+				refreshCookie(`${tokens.refreshToken.slice(0, -8)}invalid!`),
+			)
 			.expect(401);
 		await request(app.getHttpServer())
 			.post("/auth/refresh")
-			.send({ refreshToken: tokens.refreshToken })
-			.expect(200);
+			.set("Cookie", refreshCookie(tokens.refreshToken))
+			.expect(204);
 	});
 	async function login(label: string) {
 		const email = `${label}@example.com`;
@@ -109,81 +145,194 @@ describe("Session security (e2e)", () => {
 			.post("/users")
 			.send({ name: "Ana", email, password: "password" })
 			.expect(201);
-		return (
+		return tokensFromCookies(
 			await request(app.getHttpServer())
 				.post("/auth/login")
 				.send({ email, password: "password" })
-				.expect(200)
-		).body;
+				.expect(204),
+		);
 	}
-	it("rotates refresh tokens and revokes the family after replay", async () => {
+	it("rotates refresh tokens and rejects reuse without invalidating the replacement", async () => {
 		const first = await login("rotation");
-		const second = (
+		const second = tokensFromCookies(
 			await request(app.getHttpServer())
 				.post("/auth/refresh")
-				.send({ refreshToken: first.refreshToken })
-				.expect(200)
-		).body;
+				.set("Cookie", refreshCookie(first.refreshToken))
+				.expect(204),
+		);
 		expect(second.refreshToken).toEqual(expect.any(String));
 		expect(second.refreshToken).not.toBe(first.refreshToken);
 		await request(app.getHttpServer())
 			.post("/auth/refresh")
-			.send({ refreshToken: first.refreshToken })
+			.set("Cookie", refreshCookie(first.refreshToken))
 			.expect(401);
 		await request(app.getHttpServer())
 			.post("/auth/refresh")
-			.send({ refreshToken: second.refreshToken })
-			.expect(401);
+			.set("Cookie", refreshCookie(second.refreshToken))
+			.expect(204);
 	});
-	it("revokes access and refresh on logout", async () => {
+	it("revokes only the refresh cookie on logout without requiring access", async () => {
 		const tokens = await login("logout");
 		await request(app.getHttpServer())
 			.post("/auth/logout")
-			.set("Authorization", `Bearer ${tokens.accessToken}`)
+			.set("Cookie", refreshCookie(tokens.refreshToken))
 			.expect(204);
 		await request(app.getHttpServer())
 			.post("/auth/refresh")
-			.send({ refreshToken: tokens.refreshToken })
+			.set("Cookie", refreshCookie(tokens.refreshToken))
 			.expect(401);
 		await request(app.getHttpServer())
-			.delete("/users/me")
-			.set("Authorization", `Bearer ${tokens.accessToken}`)
-			.send({ password: "password" })
-			.expect(401);
+			.get("/auth-probe")
+			.set("Cookie", accessCookie(tokens.accessToken))
+			.expect(200);
+		await request(app.getHttpServer())
+			.post("/auth/logout")
+			.set("Cookie", refreshCookie(tokens.refreshToken))
+			.expect(204);
 	});
-	it("rejects access and refresh when the persisted session expires", async () => {
-		const tokens = await login("expired-session");
-		const { sid } = JSON.parse(
-			Buffer.from(tokens.refreshToken.split(".")[1], "base64url").toString(),
-		);
+	it("rejects an expired persisted refresh token without invalidating access", async () => {
+		const tokens = await login("expired-refresh");
+		const hash = createHash("sha256").update(tokens.refreshToken).digest("hex");
 		await db.execute(
-			sql`UPDATE sessions SET expires_at = now() - interval '1 second' WHERE id = ${sid}`,
+			sql`UPDATE refresh_tokens SET expires_at = now() - interval '1 second' WHERE token_hash = ${hash}`,
 		);
 		await request(app.getHttpServer())
 			.post("/auth/refresh")
-			.send({ refreshToken: tokens.refreshToken })
+			.set("Cookie", refreshCookie(tokens.refreshToken))
 			.expect(401);
 		await request(app.getHttpServer())
-			.post("/auth/logout")
-			.set("Authorization", `Bearer ${tokens.accessToken}`)
-			.expect(401);
+			.get("/auth-probe")
+			.set("Cookie", accessCookie(tokens.accessToken))
+			.expect(200);
 	});
-	it("allows at most one concurrent refresh and revokes the raced session", async () => {
+	it("allows at most one concurrent refresh and keeps the winning token valid", async () => {
 		const tokens = await login("concurrent");
 		const responses = await Promise.all(
 			[1, 2].map(() =>
 				request(app.getHttpServer())
 					.post("/auth/refresh")
-					.send({ refreshToken: tokens.refreshToken }),
+					.set("Cookie", refreshCookie(tokens.refreshToken)),
 			),
 		);
 		expect(responses.map((response) => response.status).sort()).toEqual([
-			200, 401,
+			204, 401,
 		]);
-		const rotated = responses.find((response) => response.status === 200)?.body;
+		const winner = responses.find((response) => response.status === 204);
+		expect(winner).toBeDefined();
+		const rotated = tokensFromCookies(winner as request.Response);
 		await request(app.getHttpServer())
 			.post("/auth/refresh")
-			.send({ refreshToken: rotated.refreshToken })
-			.expect(401);
+			.set("Cookie", refreshCookie(rotated.refreshToken))
+			.expect(204);
+	});
+	it("authenticates access tokens without querying PostgreSQL", async () => {
+		const tokens = await login("stateless");
+		const payload = jwt.decode(tokens.accessToken);
+		expect(payload.sid).toBeUndefined();
+		const query = vi.spyOn(pool, "query").mockImplementation(() => {
+			throw new Error("Database unavailable");
+		});
+		try {
+			const response = await request(app.getHttpServer())
+				.get("/auth-probe")
+				.set("Cookie", accessCookie(tokens.accessToken))
+				.expect(200);
+			expect(response.body).toEqual({ id: payload.sub });
+			expect(query).not.toHaveBeenCalled();
+		} finally {
+			query.mockRestore();
+		}
+	});
+	it("rejects expired, forged, wrong-issuer, wrong-audience and refresh JWTs as access", async () => {
+		const tokens = await login("invalid-access");
+		const payload = {
+			sub: jwt.decode(tokens.accessToken).sub,
+			tokenUse: "access",
+		};
+		const invalidTokens = [
+			tokens.refreshToken,
+			`${tokens.accessToken.slice(0, -8)}invalid!`,
+			await jwt.signAsync(payload, { expiresIn: -1 }),
+			await jwt.signAsync(payload, { issuer: "wrong-issuer" }),
+			await jwt.signAsync(payload, { audience: "wrong-audience" }),
+		];
+		for (const token of invalidTokens)
+			await request(app.getHttpServer())
+				.get("/auth-probe")
+				.set("Cookie", accessCookie(token))
+				.expect(401);
+	});
+	it("requires a valid refresh token to log out and leaves other logins valid", async () => {
+		const first = await login("independent-logins");
+		const second = tokensFromCookies(
+			await request(app.getHttpServer())
+				.post("/auth/login")
+				.send({ email: "independent-logins@example.com", password: "password" })
+				.expect(204),
+		);
+		await request(app.getHttpServer())
+			.post("/auth/logout")
+			.send({})
+			.expect(204);
+		for (const token of [
+			first.accessToken,
+			"invalid",
+			`${first.refreshToken.slice(0, -8)}invalid!`,
+		])
+			await request(app.getHttpServer())
+				.post("/auth/logout")
+				.set("Cookie", refreshCookie(token))
+				.expect(401);
+		await request(app.getHttpServer())
+			.post("/auth/logout")
+			.set("Cookie", refreshCookie(first.refreshToken))
+			.expect(204);
+		await request(app.getHttpServer())
+			.post("/auth/refresh")
+			.set("Cookie", refreshCookie(second.refreshToken))
+			.expect(204);
+	});
+	it("accepts a registered legacy refresh token and preserves its exact expiration", async () => {
+		const tokens = await login("legacy-refresh");
+		const sub = jwt.decode(tokens.accessToken).sub;
+		const legacyToken = await jwt.signAsync(
+			{ sub, sid: randomUUID(), jti: randomUUID(), tokenUse: "refresh" },
+			{ expiresIn: 120 },
+		);
+		const expiresAt = jwt.decode(legacyToken).exp;
+		const hash = createHash("sha256").update(legacyToken).digest("hex");
+		await db.execute(
+			sql`INSERT INTO refresh_tokens (token_hash, user_id, expires_at) VALUES (${hash}, ${sub}, ${new Date(expiresAt * 1000)})`,
+		);
+		const response = await request(app.getHttpServer())
+			.post("/auth/refresh")
+			.set("Cookie", refreshCookie(legacyToken))
+			.expect(204);
+		const payload = jwt.decode(tokensFromCookies(response).refreshToken);
+		expect(payload.exp).toBe(expiresAt);
+		expect(payload.sid).toBeUndefined();
+		await request(app.getHttpServer())
+			.post("/auth/refresh")
+			.set("Cookie", refreshCookie(tokensFromCookies(response).refreshToken))
+			.expect(204);
+	});
+	it("removes refresh tokens from every login when the account is deleted", async () => {
+		const first = await login("deleted-refreshes");
+		const second = tokensFromCookies(
+			await request(app.getHttpServer())
+				.post("/auth/login")
+				.send({ email: "deleted-refreshes@example.com", password: "password" })
+				.expect(204),
+		);
+		await request(app.getHttpServer())
+			.delete("/users/me")
+			.set("Cookie", accessCookie(first.accessToken))
+			.send({ password: "password" })
+			.expect(204);
+		for (const refreshToken of [first.refreshToken, second.refreshToken])
+			await request(app.getHttpServer())
+				.post("/auth/refresh")
+				.set("Cookie", refreshCookie(refreshToken))
+				.expect(401);
 	});
 });
