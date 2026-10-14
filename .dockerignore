@@ -1,0 +1,33 @@
+# Dependências
+node_modules
+.pnpm-store
+.temp
+.tmp
+.codex
+.agents
+.aws
+logs
+
+# Git
+.git
+.gitignore
+
+# Variáveis de ambiente locais
+.env
+.env.*
+keys
+*.pem
+*.key
+
+# Build
+dist
+*.tsbuildinfo
+
+# IDE
+.vscode
+
+# Testes e cobertura
+coverage
+
+# Docker
+docker-compose.yml

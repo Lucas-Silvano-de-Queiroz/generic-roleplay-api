@@ -1,0 +1,165 @@
+import type { INestApplication } from "@nestjs/common";
+import { Test, type TestingModule } from "@nestjs/testing";
+import request from "supertest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { AppModule } from "../../src/app.module";
+import { configureHttpApplication } from "../../src/modules/shared/presentation/configure-http-application";
+import { accessCookie, tokensFromCookies } from "../setup/auth-cookies.fixture";
+
+describe("Users (e2e)", () => {
+	let app: INestApplication;
+
+	beforeAll(async () => {
+		const moduleFixture: TestingModule = await Test.createTestingModule({
+			imports: [AppModule],
+		}).compile();
+
+		app = moduleFixture.createNestApplication();
+		configureHttpApplication(app);
+		await app.init();
+	});
+
+	afterAll(async () => {
+		await app.close();
+	});
+
+	describe("POST /users", () => {
+		it("should create a user when the payload is valid", async () => {
+			const email = `e2e-create-${Date.now()}@example.com`;
+
+			const { body } = await request(app.getHttpServer())
+				.post("/users")
+				.send({
+					name: "John Doe",
+					email,
+					password: "password",
+				})
+				.expect(201);
+
+			expect(body.id).toEqual(expect.any(String));
+		});
+
+		it("should return 409 when the email is already in use", async () => {
+			const email = `e2e-duplicated-${Date.now()}@example.com`;
+
+			await request(app.getHttpServer())
+				.post("/users")
+				.send({ name: "John Doe", email, password: "password" })
+				.expect(201);
+
+			const { body } = await request(app.getHttpServer())
+				.post("/users")
+				.send({ name: "John Doe", email, password: "password" })
+				.expect(409);
+
+			expect(body).toMatchObject({
+				statusCode: 409,
+				message: "User already exists",
+			});
+		});
+
+		it("should return 400 with details when the payload is invalid", async () => {
+			const { body } = await request(app.getHttpServer())
+				.post("/users")
+				.send({ name: "", email: "not-an-email", password: "123" })
+				.expect(400);
+
+			expect(body).toMatchObject({
+				statusCode: 400,
+				message: "Validation failed",
+			});
+			expect(body.details).toEqual(
+				expect.arrayContaining([
+					expect.objectContaining({
+						field: "email",
+						message: "Invalid email address",
+					}),
+					expect.objectContaining({
+						field: "password",
+						message: "Password must be at least 8 characters",
+					}),
+				]),
+			);
+			expect(body.errors).toBeUndefined();
+		});
+	});
+
+	describe("DELETE /users/me", () => {
+		it("should return 401 when no access token is provided", async () => {
+			const { body } = await request(app.getHttpServer())
+				.delete("/users/me")
+				.send({ password: "password" })
+				.expect(401);
+
+			expect(body).toMatchObject({
+				statusCode: 401,
+				message: "Unauthorized",
+			});
+		});
+
+		it("should delete the authenticated user when the password is correct", async () => {
+			const email = `e2e-delete-${Date.now()}@example.com`;
+			const password = "password";
+
+			await request(app.getHttpServer())
+				.post("/users")
+				.send({ name: "John Doe", email, password })
+				.expect(201);
+
+			const response = await request(app.getHttpServer())
+				.post("/auth/login")
+				.send({ email, password })
+				.expect(204);
+			const body = tokensFromCookies(response);
+
+			await request(app.getHttpServer())
+				.delete("/users/me")
+				.set("Cookie", accessCookie(body.accessToken))
+				.send({ password })
+				.expect(204);
+
+			const { body: loginAfterDelete } = await request(app.getHttpServer())
+				.post("/auth/login")
+				.send({ email, password })
+				.expect(401);
+
+			expect(loginAfterDelete).toMatchObject({
+				statusCode: 401,
+				message: "Invalid credentials",
+			});
+		});
+
+		it("should return 404 when a valid access token refers to a deleted user", async () => {
+			const email = `e2e-gone-${Date.now()}@example.com`;
+			const password = "password";
+
+			await request(app.getHttpServer())
+				.post("/users")
+				.send({ name: "John Doe", email, password })
+				.expect(201);
+
+			const response = await request(app.getHttpServer())
+				.post("/auth/login")
+				.send({ email, password })
+				.expect(204);
+			const body = tokensFromCookies(response);
+
+			await request(app.getHttpServer())
+				.delete("/users/me")
+				.set("Cookie", accessCookie(body.accessToken))
+				.send({ password })
+				.expect(204);
+
+			const { body: secondDelete } = await request(app.getHttpServer())
+				.delete("/users/me")
+				.set("Cookie", accessCookie(body.accessToken))
+				.send({ password })
+				.expect(404);
+
+			expect(secondDelete).toMatchObject({
+				statusCode: 404,
+				message: "User not found",
+			});
+		});
+	});
+});
