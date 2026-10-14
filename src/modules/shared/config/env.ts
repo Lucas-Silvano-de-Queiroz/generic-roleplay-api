@@ -70,6 +70,14 @@ const envSchema = z.object({
 				}),
 			"Allowed origins must be explicit HTTP(S) origins without paths or wildcards",
 		),
+	S3_ENDPOINT: z.string().optional(),
+	S3_BROWSER_ENDPOINT: z.string().optional(),
+	S3_REGION: z.string().min(1).default("us-east-1"),
+	S3_BUCKET: z.string().min(1).optional(),
+	S3_FORCE_PATH_STYLE: z
+		.enum(["true", "false"])
+		.default("false")
+		.transform((value) => value === "true"),
 });
 
 const result = envSchema.safeParse(process.env);
@@ -82,6 +90,37 @@ if (!result.success) {
 }
 
 const config = result.data;
+
+for (const [name, value] of [
+	["S3_ENDPOINT", config.S3_ENDPOINT],
+	["S3_BROWSER_ENDPOINT", config.S3_BROWSER_ENDPOINT],
+] as const) {
+	if (value === undefined) continue;
+	try {
+		const url = new URL(value);
+		if (
+			!["http:", "https:"].includes(url.protocol) ||
+			url.username ||
+			url.password ||
+			url.search ||
+			url.hash ||
+			(config.NODE_ENV === "production" && url.protocol !== "https:") ||
+			(config.NODE_ENV === "development" &&
+				url.protocol === "http:" &&
+				!["localhost", "127.0.0.1", "::1", "localstack"].includes(url.hostname))
+		)
+			throw new Error("invalid endpoint");
+	} catch {
+		console.error(
+			`${name} must be an HTTP(S) endpoint without credentials, query, or fragment.`,
+		);
+		process.exit(1);
+	}
+}
+if (config.S3_BROWSER_ENDPOINT && !config.S3_ENDPOINT) {
+	console.error("S3_BROWSER_ENDPOINT requires S3_ENDPOINT.");
+	process.exit(1);
+}
 
 try {
 	const privateKey = createPrivateKey(
@@ -116,6 +155,7 @@ try {
 
 export const env = {
 	...config,
+	MEDIA_ENABLED: Boolean(config.S3_BUCKET),
 
 	isDevelopment: config.NODE_ENV === "development",
 	isProduction: config.NODE_ENV === "production",

@@ -1,0 +1,18 @@
+# Storage comunitário para demonstrações locais; requer apenas Docker.
+# Usar junto de docker-compose.yml e iniciar com --no-deps para preservar o banco existente.
+services:
+  api:
+    ports: !override
+      - "127.0.0.1:3001:3000"
+    environment:
+      S3_ENDPOINT: http://localstack:4566
+      S3_BROWSER_ENDPOINT: http://127.0.0.1:4566
+      S3_REGION: us-east-1
+      S3_BUCKET: generic-roleplay-media
+      S3_FORCE_PATH_STYLE: "true"
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+  localstack:
+    image: localstack/localstack:4.14.0@sha256:3ebc37595918b8accb852f8048fef2aff047d465167edd655528065b07bc364a
+    environment:
+      LOCALSTACK_AUTH_TOKEN: ""

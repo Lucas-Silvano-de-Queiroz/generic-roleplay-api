@@ -31,6 +31,24 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 		const request = host.switchToHttp().getRequest?.();
 		const httpException = this.resolve(exception, request?.requestId);
 		const statusCode = httpException.getStatus();
+		if (
+			typeof request?.originalUrl === "string" &&
+			/\/(media|cover|images)(\/|\?|$)/.test(request.originalUrl)
+		) {
+			response.setHeader("Cache-Control", "no-store");
+		}
+		const exceptionBody = httpException.getResponse();
+		if (
+			typeof exceptionBody === "object" &&
+			exceptionBody !== null &&
+			"retryAfterSeconds" in exceptionBody
+		) {
+			const retry = Number(
+				(exceptionBody as { retryAfterSeconds?: unknown }).retryAfterSeconds,
+			);
+			if (Number.isFinite(retry) && retry > 0)
+				response.setHeader("Retry-After", String(Math.ceil(retry)));
+		}
 		if ([401, 403, 429, 503].includes(statusCode)) {
 			this.logger.warn({
 				event: "security_request_rejected",
@@ -40,7 +58,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 				route: request?.route?.path,
 			});
 		}
-		const payload = httpException.getResponse();
+		const payload = exceptionBody;
 		const details = this.details(payload);
 
 		response.status(statusCode).json({

@@ -32,6 +32,31 @@ services:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
 
+  localstack:
+    image: localstack/localstack:2026.09.0
+    container_name: gr-localstack
+    profiles: ["media"]
+    environment:
+      LOCALSTACK_AUTH_TOKEN: ${LOCALSTACK_AUTH_TOKEN:-}
+      SERVICES: s3
+      S3_SKIP_SIGNATURE_VALIDATION: "0"
+      S3_VALIDATE_SIGNATURES: "1"
+      S3_BUCKET: ${S3_BUCKET:-generic-roleplay-media}
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_DEFAULT_REGION: ${S3_REGION:-us-east-1}
+    ports:
+      - "127.0.0.1:4566:4566"
+    volumes:
+      - ./scripts/localstack-init.sh:/etc/localstack/init/ready.d/10-media.sh:ro
+      - ./scripts/media-cors.json:/etc/localstack/init/ready.d/media-cors.json:ro
+    healthcheck:
+      test: ["CMD-SHELL", "awslocal s3api head-bucket --bucket \"$${S3_BUCKET}\" >/dev/null 2>&1"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+
 volumes:
   node_modules:
   pnpm-store:
