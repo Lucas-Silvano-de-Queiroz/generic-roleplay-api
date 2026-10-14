@@ -38,9 +38,19 @@ async function bootstrap() {
 		SwaggerModule.setup("docs", app, documentFactory);
 	}
 
-	await app.listen(env.SERVER_PORT);
+	await app.listen(env.PORT ?? env.SERVER_PORT);
 }
-void bootstrap().catch(() => {
-	new Logger("Bootstrap").error({ event: "startup_failed" });
+void bootstrap().catch((error: unknown) => {
+	const errorMessage =
+		error instanceof Error
+			? error.message
+				.replace(/(postgres(?:ql)?:\/\/)[^@\s]+@/gi, "$1[REDACTED]@")
+				.replace(/\b(password|passwd|token|secret)=([^\s&]+)/gi, "$1=[REDACTED]")
+			: "Unknown startup error";
+	new Logger("Bootstrap").error({
+		event: "startup_failed",
+		errorType: error instanceof Error ? error.name : typeof error,
+		message: errorMessage,
+	});
 	process.exit(1);
 });

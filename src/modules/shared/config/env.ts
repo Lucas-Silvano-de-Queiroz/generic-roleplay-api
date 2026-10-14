@@ -4,6 +4,7 @@ import { z } from "zod";
 import { databaseUrlSchema } from "./database-url.schema";
 
 const envSchema = z.object({
+	PORT: z.coerce.number().int().min(1).max(65535).optional(),
 	SERVER_PORT: z.coerce.number().int().min(1).max(65535).default(3000),
 	NODE_ENV: z.enum(["development", "production"]),
 	DATABASE_URL: databaseUrlSchema,
